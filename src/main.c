@@ -311,11 +311,37 @@ void Buffer_Init()
 /**
  * turns on all LEDs for testing
  */
-void Init_Testing_Image_LED_Array() {
-	int length = sizeof(current_frame) / sizeof(current_frame[0]);
-
-	for (int i = 0; i < length; i++) {
+void Test_LED_Array_On() {
+	for (int i = 0; i < NUM_OF_COLS; i++) {
 		current_frame[i] = 0xFF;
+	}
+}
+
+/**
+ * Fill buffer with frames with one LED at a time, cycling through all LEDs
+ * Precondition: buffer is at least framesToRepeat*64 long
+ */
+void Test_LED_Array_Cycle_Through() {
+	const int framesToRepeat = 3;
+	char frame[NUM_OF_COLS];
+
+	for (int i = 0; i < NUM_OF_COLS; i++)
+	{
+		frame[i] = 0;
+	}
+	for (int currentLED = 0; currentLED < NUMBER_OF_LEDS; currentLED++)
+	{
+		int col = currentLED/NUM_OF_COLS;
+		int row = currentLED%NUM_OF_COLS;
+
+		frame[col] = 1 << row;
+
+		for (int i = 0; i < framesToRepeat; i++)
+		{
+			Buffer_Pushback(frame);
+		}
+
+		frame[col] = 0;
 	}
 }
 
@@ -337,7 +363,7 @@ main(int argc, char* argv[])
 	Configure_Ports();
 	Configure_LED_Display();
 
-	Init_Testing_Image_LED_Array();
+	Test_LED_Array_Cycle_Through();
 	Buffer_Init();
 
 	int previous_state = 0;
@@ -401,9 +427,12 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 
 		if (current_col == 8) {
 			current_frame_number++;
+//TODO BUG potentially
+			if (current_frame_number == times_to_repeat_frame) {
+				current_frame_number = 0;
 
-			//TODO grab next frame if number_of_repeated_frames > threshold
-			//TODO use the function <code> void *memcpy(void *dest, const void *src, size_t n); </code>
+				Buffer_Pop(current_frame);
+			}
 			current_col = 0;
 		}
 
