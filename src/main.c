@@ -1,3 +1,5 @@
+// Copyright (c) 2018 Robert Lee, Declan McIntosh, University of Victoria
+
 /*
  * This file is part of the µOS++ distribution.
  *   (https://github.com/micro-os-plus)
