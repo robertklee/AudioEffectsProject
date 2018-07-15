@@ -60,7 +60,7 @@
 
 #define NUMBER_OF_LEDS			(64)
 #define REFRESH_RATE 			(250) // this will be multiplied by 64 since there are 64 LEDs
-#define FRAMES_PER_SECOND 		(30)
+#define FRAMES_PER_SECOND 		(25) // this number should be a factor of REFRESH_RATE
 #define BUFFER_SIZE_SECONDS 	(10) // number of seconds for which the buffer stores data
 // NOTE: The following row/col are NOT on the same bus
 #define COL_0 					(GPIO_PIN_4)
@@ -86,21 +86,23 @@
  * TIM4 - LED board drawing
  * TIM5 - FFT on input signal
  */
-const int TIM3_PRIORITY = 10;
-const int TIM4_PRIORITY = 5;
-const int TIM5_Priority = 0;
+#define TIM3_PRIORITY 			(10)
+#define TIM4_PRIORITY			(5)
+#define TIM5_PRIORITY	 		(0)
+#define NUM_OF_COLS				(8)
 
 volatile char previous_button_reading = 0;
 volatile char button_state = 0;
-volatile char current_frame[8];
-volatile char display_buffer[FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS][8];
+volatile char current_frame[NUM_OF_COLS];
+volatile char display_buffer[FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS][NUM_OF_COLS];
 const int buffer_length = FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS;
 volatile int buffer_head = -1; // points to front of buffer
 volatile int buffer_tail = -1; // points to next available spot
 
 volatile char current_row = 0;
 volatile char current_col = 0;
-volatile int number_of_repeated_frames = 0;
+volatile int current_frame_number = 0;
+const int times_to_repeat_frame = REFRESH_RATE / FRAMES_PER_SECOND;
 
 void Init_GPIO_Port(uint32_t pin, uint32_t mode, uint32_t speed, uint32_t pull, char bus)
 {
@@ -241,6 +243,7 @@ void Buffer_Clear()
 }
 
 /**
+ * frame[] MUST have length NUM_OF_COLS
  * Returns 0 if buffer full, 1 if success
  */
 char Buffer_Pushback(char frame[])
@@ -253,9 +256,8 @@ char Buffer_Pushback(char frame[])
 		return 0; // buffer is full
 	}
 
-	int frame_length = sizeof(frame) / sizeof(frame[0]);
 	// copy frame to buffer
-	memcpy(display_buffer[buffer_tail], frame, frame_length);
+	memcpy(display_buffer[buffer_tail], frame, NUM_OF_COLS);
 
 	buffer_tail++; //increment to next available spot
 	buffer_tail %= buffer_length; // wrap around to beginning of buffer
@@ -264,7 +266,8 @@ char Buffer_Pushback(char frame[])
 }
 
 /**
- * Pops front of buffer and copies to destination. If empty, nothing is copied
+ * Pops front of buffer and copies to destination. If empty, nothing is copied.
+ * dest[] MUST be length NUM_OF_COLS
  * Returns 0 if buffer empty, 1 if successfully copied
  */
 char Buffer_Pop(char dest[])
@@ -274,9 +277,8 @@ char Buffer_Pop(char dest[])
 		return 0; //buffer is empty
 	}
 
-	int frame_length = sizeof(display_buffer[buffer_head]) / sizeof(display_buffer[buffer_head][0]);
-		// copy frame to buffer
-	memcpy(dest, display_buffer[buffer_head], frame_length);
+	// copy frame to buffer
+	memcpy(dest, display_buffer[buffer_head], NUM_OF_COLS);
 
 	buffer_head++;
 	buffer_head %= buffer_length;
@@ -294,15 +296,13 @@ char Buffer_Pop(char dest[])
  */
 void Buffer_Init()
 {
-	int length_of_single_frame = sizeof(current_frame[0]);
-
-	char all_zeros[length_of_single_frame];
-	for (int i = 0; i < length_of_single_frame; i++) {
+	char all_zeros[NUM_OF_COLS];
+	for (int i = 0; i < NUM_OF_COLS; i++) {
 		all_zeros[i] = 0;
 	}
 
 	for (int i = 0; i < buffer_length; i++) {
-		memcpy(display_buffer[i], all_zeros, length_of_single_frame);
+		memcpy(display_buffer[i], all_zeros, NUM_OF_COLS);
 	}
 
 	Buffer_Clear();
@@ -400,7 +400,7 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 		current_row = 0; //restart row
 
 		if (current_col == 8) {
-			number_of_repeated_frames++;
+			current_frame_number++;
 
 			//TODO grab next frame if number_of_repeated_frames > threshold
 			//TODO use the function <code> void *memcpy(void *dest, const void *src, size_t n); </code>
