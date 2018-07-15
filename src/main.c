@@ -170,6 +170,24 @@ void Configure_Ports()
 	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_0, GPIO_MODE_INPUT, 'A');
 }
 
+inline void Write_Col_0 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_0, new_state); }
+inline void Write_Col_1 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_1, new_state); }
+inline void Write_Col_2 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_2, new_state); }
+inline void Write_Col_3 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_3, new_state); }
+inline void Write_Col_4 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_4, new_state); }
+inline void Write_Col_5 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOB, COL_5, new_state); }
+inline void Write_Col_6 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, COL_6, new_state); }
+inline void Write_Col_7 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, COL_7, new_state); }
+
+inline void Write_Row_0 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, ROW_0, new_state); }
+inline void Write_Row_1 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, ROW_1, new_state); }
+inline void Write_Row_2 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOB, ROW_2, new_state); }
+inline void Write_Row_3 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, ROW_3, new_state); }
+inline void Write_Row_4 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, ROW_4, new_state); }
+inline void Write_Row_5 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, ROW_5, new_state); }
+inline void Write_Row_6 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_6, new_state); }
+inline void Write_Row_7 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_7, new_state); }
+
 void Configure_LED_Display() {
 	Init_GPIO_Port_Default_Speed_Pull(COL_0, GPIO_MODE_OUTPUT_PP, 'C');
 	Init_GPIO_Port_Default_Speed_Pull(COL_1, GPIO_MODE_OUTPUT_PP, 'C');
@@ -190,24 +208,24 @@ void Configure_LED_Display() {
 	Init_GPIO_Port_Default_Speed_Pull(ROW_7, GPIO_MODE_OUTPUT_PP, 'C');
 
 	// turn off all columns
-	HAL_GPIO_WritePin(GPIOC, COL_0, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOC, COL_1, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOD, COL_2, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOD, COL_3, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOD, COL_4, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOB, COL_5, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOE, COL_6, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOE, COL_7, GPIO_PIN_RESET);
+	Write_Col_0(GPIO_PIN_RESET);
+	Write_Col_1(GPIO_PIN_RESET);
+	Write_Col_2(GPIO_PIN_RESET);
+	Write_Col_3(GPIO_PIN_RESET);
+	Write_Col_4(GPIO_PIN_RESET);
+	Write_Col_5(GPIO_PIN_RESET);
+	Write_Col_6(GPIO_PIN_RESET);
+	Write_Col_7(GPIO_PIN_RESET);
 
 	// turn off all rows
-	HAL_GPIO_WritePin(GPIOE, ROW_0, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOE, ROW_1, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOB, ROW_2, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOD, ROW_3, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOD, ROW_4, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOD, ROW_5, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOC, ROW_6, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOC, ROW_7, GPIO_PIN_RESET);
+	Write_Row_0(GPIO_PIN_RESET);
+	Write_Row_1(GPIO_PIN_RESET);
+	Write_Row_2(GPIO_PIN_RESET);
+	Write_Row_3(GPIO_PIN_RESET);
+	Write_Row_4(GPIO_PIN_RESET);
+	Write_Row_5(GPIO_PIN_RESET);
+	Write_Row_6(GPIO_PIN_RESET);
+	Write_Row_7(GPIO_PIN_RESET);
 }
 
 int
@@ -271,62 +289,102 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 	}
 }
 
+/**
+ * WARNING: The LED array MUST be advanced from
+ * decreasing rows and columns to increasing rows/columns
+ * as the logic is optimized for that situation
+ */
 void TIM4_IRQHandler()
 {
 	__HAL_TIM_CLEAR_FLAG( &LEDDisplayTimer, TIM_IT_UPDATE ); //clear flag status
 
 	if (current_frame[current_col] & 1 << current_row) {
+		// for each case, turn off previous row, turn on current row
 		switch(current_row) {
-			case 0:
-				break;
-			case 1:
-				break;
-			case 2:
-				break;
-			case 3:
-				break;
-			case 4:
-				break;
-			case 5:
-				break;
-			case 6:
-				break;
-			case 7:
-				break;
-			default:
-				//Should never enter this
-				t_printf("Invalid state in switch(current_col)");
-				break;
+		    case 0:
+		        Write_Row_7(GPIO_PIN_RESET);
+		        Write_Row_0(GPIO_PIN_SET);
+		        break;
+		    case 1:
+		        Write_Row_0(GPIO_PIN_RESET);
+		        Write_Row_1(GPIO_PIN_SET);
+		        break;
+		    case 2:
+		        Write_Row_1(GPIO_PIN_RESET);
+		        Write_Row_2(GPIO_PIN_SET);
+		        break;
+		    case 3:
+		        Write_Row_2(GPIO_PIN_RESET);
+		        Write_Row_3(GPIO_PIN_SET);
+		        break;
+		    case 4:
+		        Write_Row_3(GPIO_PIN_RESET);
+		        Write_Row_4(GPIO_PIN_SET);
+		        break;
+		    case 5:
+		        Write_Row_4(GPIO_PIN_RESET);
+		        Write_Row_5(GPIO_PIN_SET);
+		        break;
+		    case 6:
+		        Write_Row_5(GPIO_PIN_RESET);
+		        Write_Row_6(GPIO_PIN_SET);
+		        break;
+		    case 7:
+		        Write_Row_6(GPIO_PIN_RESET);
+		        Write_Row_7(GPIO_PIN_SET);
+		        break;
+		    default:
+		        //Should never enter this
+		        trace_printf("Invalid state in switch(current_row)");
+		        break;
 		}
 	}
 
-	current_row++;
+	current_row++; //move to next row
 	if (current_row == 8) {
-//		HAL_GPIO_WritePin(GPIOC, COL_0, GPIO_PIN_RESET);
-		current_col++;
-		current_row = 0;
+		//need to turn off row 7 since we are advancing to next column
+		Write_Row_7(GPIO_PIN_RESET);
 
+		current_col++; //advance to next column
+		current_row = 0; //restart row
+
+		// for each case, turn off previous column, turn on current column
 		switch(current_col) {
 			case 0:
-//				HAL_GPIO_WritePin(GPIOC, COL_7, GPIO_PIN_RESET);
+				Write_Col_7(GPIO_PIN_RESET);
+				Write_Col_0(GPIO_PIN_SET);
 				break;
 			case 1:
+				Write_Col_0(GPIO_PIN_RESET);
+				Write_Col_1(GPIO_PIN_SET);
 				break;
 			case 2:
+				Write_Col_1(GPIO_PIN_RESET);
+				Write_Col_2(GPIO_PIN_SET);
 				break;
 			case 3:
+				Write_Col_2(GPIO_PIN_RESET);
+				Write_Col_3(GPIO_PIN_SET);
 				break;
 			case 4:
+				Write_Col_3(GPIO_PIN_RESET);
+				Write_Col_4(GPIO_PIN_SET);
 				break;
 			case 5:
+				Write_Col_4(GPIO_PIN_RESET);
+				Write_Col_5(GPIO_PIN_SET);
 				break;
 			case 6:
+				Write_Col_5(GPIO_PIN_RESET);
+				Write_Col_6(GPIO_PIN_SET);
 				break;
 			case 7:
+				Write_Col_6(GPIO_PIN_RESET);
+				Write_Col_7(GPIO_PIN_SET);
 				break;
 			default:
 				//Should never enter this
-				t_printf("Invalid state in switch(current_col)");
+				trace_printf("Invalid state in switch(current_col)");
 				break;
 		}
 	}
