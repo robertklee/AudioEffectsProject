@@ -311,9 +311,18 @@ void Buffer_Init()
 /**
  * turns on all LEDs for testing
  */
-void Test_LED_Array_On() {
+void LED_Array_All_On() {
 	for (int i = 0; i < NUM_OF_COLS; i++) {
 		current_frame[i] = 0xFF;
+	}
+}
+
+/**
+ * turns off all LEDs for testing
+ */
+void LED_Array_All_Off() {
+	for (int i = 0; i < NUM_OF_COLS; i++) {
+		current_frame[i] = 0;
 	}
 }
 
@@ -343,6 +352,12 @@ void Test_LED_Array_Cycle_Through() {
 
 		frame[col] = 0;
 	}
+
+	for (int i = 0; i < NUM_OF_COLS; i++) {
+		frame[i] = 0;
+	}
+
+	Buffer_Pushback(frame);
 }
 
 int
@@ -359,12 +374,18 @@ main(int argc, char* argv[])
 	__GPIOD_CLK_ENABLE(); // enabling clock for port D
 	__GPIOE_CLK_ENABLE(); // enabling clock for port E
 
-	ConfigureTimers();
 	Configure_Ports();
 	Configure_LED_Display();
 
-	Test_LED_Array_Cycle_Through();
-	Buffer_Init();
+//	LED_Array_All_On();
+//	Buffer_Init();
+	LED_Array_All_Off();
+
+	// Start timers LAST to ensure that no interrupts based on timers will
+	// trigger before initialization of board is complete
+	ConfigureTimers();
+
+	HAL_GPIO_WritePin( GPIOD, GPIO_PIN_12, 1);
 
 	int previous_state = 0;
 	// Infinite loop
@@ -376,11 +397,14 @@ main(int argc, char* argv[])
 			if (previous_state) {
 				//falling edge triggered
 				HAL_GPIO_TogglePin( GPIOD, GPIO_PIN_12);
+
+				Test_LED_Array_Cycle_Through();
 			}
 			previous_state = 0;
 		}
 	   // Add your code here.
 	}
+	//TODO add code upon stop execution of program
 }
 
 void TIM3_IRQHandler()//Timer3 interrupt function
@@ -426,9 +450,9 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 		current_row = 0; //restart row
 
 		if (current_col == 8) {
-			current_frame_number++;
 //TODO BUG potentially
-			if (current_frame_number == times_to_repeat_frame) {
+			current_frame_number++;
+			if (current_frame_number > times_to_repeat_frame) {
 				current_frame_number = 0;
 
 				Buffer_Pop(current_frame);
@@ -478,46 +502,44 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 		}
 	}
 
-	if (current_frame[current_col] & 1 << current_row) {
-		// for each case, turn off previous row, turn on current row
-		switch(current_row) {
-		    case 0:
-		        Write_Row_7(GPIO_PIN_RESET);
-		        Write_Row_0(GPIO_PIN_SET);
-		        break;
-		    case 1:
-		        Write_Row_0(GPIO_PIN_RESET);
-		        Write_Row_1(GPIO_PIN_SET);
-		        break;
-		    case 2:
-		        Write_Row_1(GPIO_PIN_RESET);
-		        Write_Row_2(GPIO_PIN_SET);
-		        break;
-		    case 3:
-		        Write_Row_2(GPIO_PIN_RESET);
-		        Write_Row_3(GPIO_PIN_SET);
-		        break;
-		    case 4:
-		        Write_Row_3(GPIO_PIN_RESET);
-		        Write_Row_4(GPIO_PIN_SET);
-		        break;
-		    case 5:
-		        Write_Row_4(GPIO_PIN_RESET);
-		        Write_Row_5(GPIO_PIN_SET);
-		        break;
-		    case 6:
-		        Write_Row_5(GPIO_PIN_RESET);
-		        Write_Row_6(GPIO_PIN_SET);
-		        break;
-		    case 7:
-		        Write_Row_6(GPIO_PIN_RESET);
-		        Write_Row_7(GPIO_PIN_SET);
-		        break;
-		    default:
-		        //Should never enter this
-		        trace_printf("Invalid state in switch(current_row)");
-		        break;
-		}
+	// for each case, turn off previous row, turn on current row
+	switch(current_row) {
+		case 0:
+			Write_Row_7(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_0(GPIO_PIN_SET); }
+			break;
+		case 1:
+			Write_Row_0(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_1(GPIO_PIN_SET); }
+			break;
+		case 2:
+			Write_Row_1(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_2(GPIO_PIN_SET); }
+			break;
+		case 3:
+			Write_Row_2(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_3(GPIO_PIN_SET); }
+			break;
+		case 4:
+			Write_Row_3(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_4(GPIO_PIN_SET); }
+			break;
+		case 5:
+			Write_Row_4(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_5(GPIO_PIN_SET); }
+			break;
+		case 6:
+			Write_Row_5(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_6(GPIO_PIN_SET); }
+			break;
+		case 7:
+			Write_Row_6(GPIO_PIN_RESET);
+			if (current_frame[current_col] & 1 << current_row) { Write_Row_7(GPIO_PIN_SET); }
+			break;
+		default:
+			//Should never enter this
+			trace_printf("Invalid state in switch(current_row)");
+			break;
 	}
 
 	current_row++; //move to next row
