@@ -228,6 +228,17 @@ void Configure_LED_Display() {
 	Write_Row_7(GPIO_PIN_RESET);
 }
 
+/**
+ * turns on all LEDs for testing
+ */
+void Init_Testing_Image_LED_Array() {
+	int length = sizeof(current_frame) / sizeof(current_frame[0]);
+
+	for (int i = 0; i < length; i++) {
+		current_frame[i] = 0xFF;
+	}
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -246,6 +257,8 @@ main(int argc, char* argv[])
 	Configure_Ports();
 	Configure_LED_Display();
 
+	Init_Testing_Image_LED_Array();
+
 	int previous_state = 0;
 	// Infinite loop
 	while (1)
@@ -254,6 +267,7 @@ main(int argc, char* argv[])
 			previous_state = 1;
 		} else {
 			if (previous_state) {
+				//falling edge triggered
 				HAL_GPIO_TogglePin( GPIOD, GPIO_PIN_12);
 			}
 			previous_state = 0;
@@ -294,9 +308,64 @@ void TIM3_IRQHandler()//Timer3 interrupt function
  * decreasing rows and columns to increasing rows/columns
  * as the logic is optimized for that situation
  */
-void TIM4_IRQHandler()
+void TIM4_IRQHandler() //Timer4 interrupt function
 {
 	__HAL_TIM_CLEAR_FLAG( &LEDDisplayTimer, TIM_IT_UPDATE ); //clear flag status
+
+	if (current_row == 8) {
+		// at end of rows, need to advance to next column
+
+		current_col++; //advance to next column
+		current_row = 0; //restart row
+
+		if (current_col == 8) {
+			number_of_repeated_frames++;
+
+			//TODO grab next frame if number_of_repeated_frames > threshold
+			current_col = 0;
+		}
+
+		// columns only need to be updated when the column number updates
+		// for each case, turn off previous column, turn on current column
+		switch(current_col) {
+			case 0:
+				Write_Col_7(GPIO_PIN_RESET);
+				Write_Col_0(GPIO_PIN_SET);
+				break;
+			case 1:
+				Write_Col_0(GPIO_PIN_RESET);
+				Write_Col_1(GPIO_PIN_SET);
+				break;
+			case 2:
+				Write_Col_1(GPIO_PIN_RESET);
+				Write_Col_2(GPIO_PIN_SET);
+				break;
+			case 3:
+				Write_Col_2(GPIO_PIN_RESET);
+				Write_Col_3(GPIO_PIN_SET);
+				break;
+			case 4:
+				Write_Col_3(GPIO_PIN_RESET);
+				Write_Col_4(GPIO_PIN_SET);
+				break;
+			case 5:
+				Write_Col_4(GPIO_PIN_RESET);
+				Write_Col_5(GPIO_PIN_SET);
+				break;
+			case 6:
+				Write_Col_5(GPIO_PIN_RESET);
+				Write_Col_6(GPIO_PIN_SET);
+				break;
+			case 7:
+				Write_Col_6(GPIO_PIN_RESET);
+				Write_Col_7(GPIO_PIN_SET);
+				break;
+			default:
+				//Should never enter this
+				trace_printf("Invalid state in switch(current_col)");
+				break;
+		}
+	}
 
 	if (current_frame[current_col] & 1 << current_row) {
 		// for each case, turn off previous row, turn on current row
@@ -341,57 +410,6 @@ void TIM4_IRQHandler()
 	}
 
 	current_row++; //move to next row
-	if (current_row == 8) {
-		//need to turn off row 7 since we are advancing to next column
-		Write_Row_7(GPIO_PIN_RESET);
-
-		current_col++; //advance to next column
-		current_row = 0; //restart row
-
-		// for each case, turn off previous column, turn on current column
-		switch(current_col) {
-			case 0:
-				Write_Col_7(GPIO_PIN_RESET);
-				Write_Col_0(GPIO_PIN_SET);
-				break;
-			case 1:
-				Write_Col_0(GPIO_PIN_RESET);
-				Write_Col_1(GPIO_PIN_SET);
-				break;
-			case 2:
-				Write_Col_1(GPIO_PIN_RESET);
-				Write_Col_2(GPIO_PIN_SET);
-				break;
-			case 3:
-				Write_Col_2(GPIO_PIN_RESET);
-				Write_Col_3(GPIO_PIN_SET);
-				break;
-			case 4:
-				Write_Col_3(GPIO_PIN_RESET);
-				Write_Col_4(GPIO_PIN_SET);
-				break;
-			case 5:
-				Write_Col_4(GPIO_PIN_RESET);
-				Write_Col_5(GPIO_PIN_SET);
-				break;
-			case 6:
-				Write_Col_5(GPIO_PIN_RESET);
-				Write_Col_6(GPIO_PIN_SET);
-				break;
-			case 7:
-				Write_Col_6(GPIO_PIN_RESET);
-				Write_Col_7(GPIO_PIN_SET);
-				break;
-			default:
-				//Should never enter this
-				trace_printf("Invalid state in switch(current_col)");
-				break;
-		}
-	}
-	if (current_col == 8) {
-		number_of_repeated_frames++;
-		current_col = 0;
-	}
 }
 
 #pragma GCC diagnostic pop
