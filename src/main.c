@@ -79,6 +79,27 @@
 #define ROW_5 					(GPIO_PIN_5)
 #define ROW_6 					(GPIO_PIN_5)
 #define ROW_7 					(GPIO_PIN_6)
+#define BUTTON_1				(GPIO_PIN_1)
+#define BUTTON_2				(GPIO_PIN_4)
+#define BUTTON_3				(GPIO_PIN_1)
+
+#define R0						(0)
+#define R1						(1)
+#define R2						(2)
+#define R3						(3)
+#define R4						(4)
+#define R5						(5)
+#define R6						(6)
+#define R7						(7)
+
+#define C0						(0)
+#define C1						(1)
+#define C2						(2)
+#define C3						(3)
+#define C4						(4)
+#define C5						(5)
+#define C6						(6)
+#define C7						(7)
 
 /**
  * Timer usage documentation:
@@ -91,18 +112,27 @@
 #define TIM5_PRIORITY	 		(0)
 #define NUM_OF_COLS				(8)
 
-volatile char previous_button_reading = 0;
-volatile char button_state = 0;
+volatile char previous_button_reading_PA0 = 0;
+volatile char button_state_PA0 = 0;
+volatile char previous_button_reading_PC1 = 0;
+volatile char button_state_PC1 = 0;
+volatile char previous_button_reading_PC4 = 0;
+volatile char button_state_PC4 = 0;
+volatile char previous_button_reading_PB1 = 0;
+volatile char button_state_PB1 = 0;
+
 volatile char current_frame[NUM_OF_COLS];
 volatile char display_buffer[FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS][NUM_OF_COLS];
 const int buffer_length = FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS;
-volatile int buffer_head = -1; // points to front of buffer
+volatile int buffer_head = 0; // points to front of buffer
 volatile int buffer_tail = -1; // points to next available spot
 
 volatile char current_row = 0;
 volatile char current_col = 0;
 volatile int current_frame_number = 0;
 const int times_to_repeat_frame = REFRESH_RATE / FRAMES_PER_SECOND;
+
+int LED_Array_State = 0;
 
 void Init_GPIO_Port(uint32_t pin, uint32_t mode, uint32_t speed, uint32_t pull, char bus)
 {
@@ -174,6 +204,10 @@ void Configure_Ports()
 {
 	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_12, GPIO_MODE_OUTPUT_PP, 'D');
 	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_0, GPIO_MODE_INPUT, 'A');
+
+	Init_GPIO_Port_Default_Speed_Pull(BUTTON_1, GPIO_MODE_INPUT, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(BUTTON_2, GPIO_MODE_INPUT, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(BUTTON_3, GPIO_MODE_INPUT, 'B');
 }
 
 // utility inline functions to encapsulate the bus and port number of the row/col
@@ -234,6 +268,8 @@ void Configure_LED_Display() {
 	Write_Row_5(GPIO_PIN_RESET);
 	Write_Row_6(GPIO_PIN_RESET);
 	Write_Row_7(GPIO_PIN_RESET);
+
+	Buffer_Init();
 }
 
 void Buffer_Clear()
@@ -326,6 +362,16 @@ void LED_Array_All_Off() {
 	}
 }
 
+void Toggle_LED_Array() {
+	if (LED_Array_State) {
+		LED_Array_All_Off();
+		LED_Array_State = 0;
+	} else {
+		LED_Array_All_On();
+		LED_Array_State = 1;
+	}
+}
+
 /**
  * Fill buffer with frames with one LED at a time, cycling through all LEDs
  * Precondition: buffer is at least framesToRepeat*64 long
@@ -378,8 +424,9 @@ main(int argc, char* argv[])
 	Configure_LED_Display();
 
 //	LED_Array_All_On();
-//	Buffer_Init();
 	LED_Array_All_Off();
+
+	Test_LED_Array_Cycle_Through();
 
 	// Start timers LAST to ensure that no interrupts based on timers will
 	// trigger before initialization of board is complete
@@ -391,14 +438,12 @@ main(int argc, char* argv[])
 	// Infinite loop
 	while (1)
 	{
-		if (button_state) {
+		if (button_state_PA0) {
 			previous_state = 1;
 		} else {
 			if (previous_state) {
 				//falling edge triggered
 				HAL_GPIO_TogglePin( GPIOD, GPIO_PIN_12);
-
-				Test_LED_Array_Cycle_Through();
 			}
 			previous_state = 0;
 		}
@@ -417,20 +462,20 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 	// of the system
 	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)) {
 		// button is pressed.
-		if (previous_button_reading) {
+		if (previous_button_reading_PA0) {
 			// if this is consistent with previous reading, set state to 1
-			button_state = 1;
+			button_state_PA0 = 1;
 		}
 		//update previous reading to current reading
-		previous_button_reading = 1;
+		previous_button_reading_PA0 = 1;
 	} else {
 		// button is not pressed
-		if (!previous_button_reading) {
+		if (!previous_button_reading_PA0) {
 			// if this is consistent with previous reading, set state to 0
-			button_state = 0;
+			button_state_PA0 = 0;
 		}
 		//update previous reading to current reading
-		previous_button_reading = 0;
+		previous_button_reading_PA0 = 0;
 	}
 }
 
