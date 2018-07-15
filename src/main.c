@@ -272,6 +272,9 @@ void Configure_LED_Display() {
 	Buffer_Init();
 }
 
+/**
+ * Resets buffer head and tail for empty buffer
+ */
 void Buffer_Clear()
 {
 	buffer_head = 0;
