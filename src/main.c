@@ -56,10 +56,50 @@
 #pragma GCC diagnostic ignored "-Wmissing-declarations"
 #pragma GCC diagnostic ignored "-Wreturn-type"
 
-volatile int previous_button_reading = 0;
-volatile int button_state = 0;
+#define FRAMES_PER_SECOND 		(30)
+#define BUFFER_SIZE_SECONDS 	(5) // number of seconds for which the buffer stores data
+#define COL_0 					(GPIO_PIN_8)
+#define COL_1 					(GPIO_PIN_6)
+#define COL_2 					(GPIO_PIN_0)
+#define COL_3 					(GPIO_PIN_1)
+#define COL_4					(GPIO_PIN_6)
+#define COL_5 					(GPIO_PIN_7)
+#define COL_6 					(GPIO_PIN_2)
+#define COL_7 					(GPIO_PIN_4)
+#define ROW_0 					(GPIO_PIN_6)
+#define ROW_1 					(GPIO_PIN_5)
+#define ROW_2 					(GPIO_PIN_5)
+#define ROW_3 					(GPIO_PIN_7)
+#define ROW_4 					(GPIO_PIN_3)
+#define ROW_5 					(GPIO_PIN_2)
+#define ROW_6 					(GPIO_PIN_11)
+#define ROW_7 					(GPIO_PIN_9)
 
-void init_GPIO_Port(uint32_t pin, uint32_t mode, uint32_t speed, uint32_t pull, char bus)
+
+const int NUMBER_OF_LEDS = 64;
+const int REFRESH_RATE = 250; // this will be multiplied by 64 since there are 64 LEDs
+
+/**
+ * Timer usage documentation:
+ * TIM3 - polling of all button inputs, and debouncing
+ * TIM4 - LED board drawing
+ * TIM5 - FFT on input signal
+ */
+const int TIM3_PRIORITY = 10;
+const int TIM4_PRIORITY = 5;
+const int TIM5_Priority = 0;
+
+volatile char previous_button_reading = 0;
+volatile char button_state = 0;
+volatile char current_frame[8];
+volatile char display_buffer[8][FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS];
+int buffer_size = FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS;
+
+volatile char current_row = 0;
+volatile char current_col = 0;
+volatile int number_of_repeated_frames = 0;
+
+void Init_GPIO_Port(uint32_t pin, uint32_t mode, uint32_t speed, uint32_t pull, char bus)
 {
 	GPIO_InitTypeDef GPIO_InitStructure; //a handle to initialize GPIO
 
@@ -81,13 +121,14 @@ void init_GPIO_Port(uint32_t pin, uint32_t mode, uint32_t speed, uint32_t pull, 
 	}
 }
 
-void init_GPIO_Port_Default_Speed_Pull(uint32_t pin, uint32_t mode, char bus)
+void Init_GPIO_Port_Default_Speed_Pull(uint32_t pin, uint32_t mode, char bus)
 {
-	init_GPIO_Port(pin, mode, GPIO_SPEED_MEDIUM, GPIO_NOPULL, bus);
+	Init_GPIO_Port(pin, mode, GPIO_SPEED_MEDIUM, GPIO_NOPULL, bus);
 }
 
 TIM_HandleTypeDef	DisplayTimer;
-void ConfigureTimer()
+TIM_HandleTypeDef 	LEDDisplayTimer;
+void ConfigureTimers()
 {
 	__HAL_RCC_TIM3_CLK_ENABLE();
 	DisplayTimer.Instance = TIM3;
@@ -97,18 +138,76 @@ void ConfigureTimer()
 	DisplayTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	HAL_TIM_Base_Init( &DisplayTimer );
 
-	HAL_NVIC_SetPriority( TIM3_IRQn, 10, 10);
+	HAL_NVIC_SetPriority( TIM3_IRQn, TIM3_PRIORITY, TIM3_PRIORITY);
 	//set priority for the interrupt. Value 0 corresponds to highest priority
 	HAL_NVIC_EnableIRQ( TIM3_IRQn );//Enable interrupt function request of Timer3
 
 	__HAL_TIM_ENABLE_IT( &DisplayTimer, TIM_IT_UPDATE );// Enable timer interrupt flag to be set when timer count is reached
 	__HAL_TIM_ENABLE( &DisplayTimer );//Enable timer to start
+
+
+	__HAL_RCC_TIM4_CLK_ENABLE();
+	LEDDisplayTimer.Instance = TIM4;
+	int prescaler = 105;
+	LEDDisplayTimer.Init.Prescaler = prescaler - 1; // reduce to 800 kHz
+	LEDDisplayTimer.Init.Period =  84000000 / prescaler / REFRESH_RATE / NUMBER_OF_LEDS - 1;
+	// reduce to (refresh rate * Number of LEDs) frequency
+	LEDDisplayTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
+	LEDDisplayTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	HAL_TIM_Base_Init( &LEDDisplayTimer );
+
+	HAL_NVIC_SetPriority( TIM4_IRQn, TIM4_PRIORITY, TIM4_PRIORITY);
+	//set priority for the interrupt. Value 0 corresponds to highest priority
+	HAL_NVIC_EnableIRQ( TIM4_IRQn );//Enable interrupt function request of Timer3
+
+	__HAL_TIM_ENABLE_IT( &LEDDisplayTimer, TIM_IT_UPDATE );// Enable timer interrupt flag to be set when timer count is reached
+	__HAL_TIM_ENABLE( &LEDDisplayTimer );//Enable timer to start
 }
 
 void Configure_Ports()
 {
-	init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_12, GPIO_MODE_OUTPUT_PP, 'D');
-	init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_0, GPIO_MODE_INPUT, 'A');
+	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_12, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_0, GPIO_MODE_INPUT, 'A');
+}
+
+void Configure_LED_Display() {
+	Init_GPIO_Port_Default_Speed_Pull(COL_0, GPIO_MODE_OUTPUT_PP, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(COL_1, GPIO_MODE_OUTPUT_PP, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(COL_2, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(COL_3, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(COL_4, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(COL_5, GPIO_MODE_OUTPUT_PP, 'B');
+	Init_GPIO_Port_Default_Speed_Pull(COL_6, GPIO_MODE_OUTPUT_PP, 'E');
+	Init_GPIO_Port_Default_Speed_Pull(COL_7, GPIO_MODE_OUTPUT_PP, 'E');
+
+	Init_GPIO_Port_Default_Speed_Pull(ROW_0, GPIO_MODE_OUTPUT_PP, 'E');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_1, GPIO_MODE_OUTPUT_PP, 'E');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_2, GPIO_MODE_OUTPUT_PP, 'B');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_3, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_4, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_5, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_6, GPIO_MODE_OUTPUT_PP, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_7, GPIO_MODE_OUTPUT_PP, 'C');
+
+	// turn off all columns
+	HAL_GPIO_WritePin(GPIOC, COL_0, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, COL_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, COL_2, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, COL_3, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, COL_4, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, COL_5, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, COL_6, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, COL_7, GPIO_PIN_RESET);
+
+	// turn off all rows
+	HAL_GPIO_WritePin(GPIOE, ROW_0, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOE, ROW_1, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, ROW_2, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, ROW_3, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, ROW_4, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOD, ROW_5, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, ROW_6, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, ROW_7, GPIO_PIN_RESET);
 }
 
 int
@@ -119,10 +218,15 @@ main(int argc, char* argv[])
 
 	HAL_Init();// initializing HAL drivers
 
+	__GPIOA_CLK_ENABLE(); // enabling clock for port A
+	__GPIOB_CLK_ENABLE(); // enabling clock for port B
+	__GPIOC_CLK_ENABLE(); // enabling clock for port C
 	__GPIOD_CLK_ENABLE(); // enabling clock for port D
-	__GPIOA_CLK_ENABLE(); // enabling clock for port D
-	ConfigureTimer();
+	__GPIOE_CLK_ENABLE(); // enabling clock for port E
+
+	ConfigureTimers();
 	Configure_Ports();
+	Configure_LED_Display();
 
 	int previous_state = 0;
 	// Infinite loop
@@ -164,6 +268,71 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 		}
 		//update previous reading to current reading
 		previous_button_reading = 0;
+	}
+}
+
+void TIM4_IRQHandler()
+{
+	__HAL_TIM_CLEAR_FLAG( &LEDDisplayTimer, TIM_IT_UPDATE ); //clear flag status
+
+	if (current_frame[current_col] & 1 << current_row) {
+		switch(current_row) {
+			case 0:
+				break;
+			case 1:
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			case 4:
+				break;
+			case 5:
+				break;
+			case 6:
+				break;
+			case 7:
+				break;
+			default:
+				//Should never enter this
+				t_printf("Invalid state in switch(current_col)");
+				break;
+		}
+	}
+
+	current_row++;
+	if (current_row == 8) {
+//		HAL_GPIO_WritePin(GPIOC, COL_0, GPIO_PIN_RESET);
+		current_col++;
+		current_row = 0;
+
+		switch(current_col) {
+			case 0:
+//				HAL_GPIO_WritePin(GPIOC, COL_7, GPIO_PIN_RESET);
+				break;
+			case 1:
+				break;
+			case 2:
+				break;
+			case 3:
+				break;
+			case 4:
+				break;
+			case 5:
+				break;
+			case 6:
+				break;
+			case 7:
+				break;
+			default:
+				//Should never enter this
+				t_printf("Invalid state in switch(current_col)");
+				break;
+		}
+	}
+	if (current_col == 8) {
+		number_of_repeated_frames++;
+		current_col = 0;
 	}
 }
 
