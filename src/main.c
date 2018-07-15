@@ -56,8 +56,11 @@
 #pragma GCC diagnostic ignored "-Wmissing-declarations"
 #pragma GCC diagnostic ignored "-Wreturn-type"
 
+#define NUMBER_OF_LEDS			(64)
+#define REFRESH_RATE 			(250) // this will be multiplied by 64 since there are 64 LEDs
 #define FRAMES_PER_SECOND 		(30)
 #define BUFFER_SIZE_SECONDS 	(5) // number of seconds for which the buffer stores data
+// NOTE: The following row/col are NOT on the same bus
 #define COL_0 					(GPIO_PIN_8)
 #define COL_1 					(GPIO_PIN_6)
 #define COL_2 					(GPIO_PIN_0)
@@ -75,10 +78,6 @@
 #define ROW_6 					(GPIO_PIN_11)
 #define ROW_7 					(GPIO_PIN_9)
 
-
-const int NUMBER_OF_LEDS = 64;
-const int REFRESH_RATE = 250; // this will be multiplied by 64 since there are 64 LEDs
-
 /**
  * Timer usage documentation:
  * TIM3 - polling of all button inputs, and debouncing
@@ -92,8 +91,10 @@ const int TIM5_Priority = 0;
 volatile char previous_button_reading = 0;
 volatile char button_state = 0;
 volatile char current_frame[8];
-volatile char display_buffer[8][FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS];
-int buffer_size = FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS;
+volatile char display_buffer[FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS][8];
+const int buffer_size = FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS;
+volatile int buffer_head = -1;
+volatile int buffer_tail = -1;
 
 volatile char current_row = 0;
 volatile char current_col = 0;
@@ -126,6 +127,7 @@ void Init_GPIO_Port_Default_Speed_Pull(uint32_t pin, uint32_t mode, char bus)
 	Init_GPIO_Port(pin, mode, GPIO_SPEED_MEDIUM, GPIO_NOPULL, bus);
 }
 
+// important for these to be in global as they need to be accessed in interrupt service routine
 TIM_HandleTypeDef	DisplayTimer;
 TIM_HandleTypeDef 	LEDDisplayTimer;
 void ConfigureTimers()
@@ -170,6 +172,7 @@ void Configure_Ports()
 	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_0, GPIO_MODE_INPUT, 'A');
 }
 
+// utility inline functions to encapsulate the bus and port number of the row/col
 inline void Write_Col_0 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_0, new_state); }
 inline void Write_Col_1 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_1, new_state); }
 inline void Write_Col_2 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_2, new_state); }
@@ -189,6 +192,7 @@ inline void Write_Row_6 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_6, n
 inline void Write_Row_7 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_7, new_state); }
 
 void Configure_LED_Display() {
+	// init all rows and columns as output, medium speed, no pull
 	Init_GPIO_Port_Default_Speed_Pull(COL_0, GPIO_MODE_OUTPUT_PP, 'C');
 	Init_GPIO_Port_Default_Speed_Pull(COL_1, GPIO_MODE_OUTPUT_PP, 'C');
 	Init_GPIO_Port_Default_Speed_Pull(COL_2, GPIO_MODE_OUTPUT_PP, 'D');
@@ -228,6 +232,10 @@ void Configure_LED_Display() {
 	Write_Row_7(GPIO_PIN_RESET);
 }
 
+void Init_Buffer() {
+	buffer_head = display_buffer;
+}
+
 /**
  * turns on all LEDs for testing
  */
@@ -258,6 +266,7 @@ main(int argc, char* argv[])
 	Configure_LED_Display();
 
 	Init_Testing_Image_LED_Array();
+	Init_Buffer();
 
 	int previous_state = 0;
 	// Infinite loop
