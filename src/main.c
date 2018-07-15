@@ -36,6 +36,8 @@
 #include <sys/stat.h>
 #include "stm32f4xx_hal.h"
 
+#include <string.h> //for memcpy
+
 // ----------------------------------------------------------------------------
 //
 // Standalone STM32F4 empty sample (trace via DEBUG).
@@ -59,7 +61,7 @@
 #define NUMBER_OF_LEDS			(64)
 #define REFRESH_RATE 			(250) // this will be multiplied by 64 since there are 64 LEDs
 #define FRAMES_PER_SECOND 		(30)
-#define BUFFER_SIZE_SECONDS 	(5) // number of seconds for which the buffer stores data
+#define BUFFER_SIZE_SECONDS 	(10) // number of seconds for which the buffer stores data
 // NOTE: The following row/col are NOT on the same bus
 #define COL_0 					(GPIO_PIN_4)
 #define COL_1 					(GPIO_PIN_2)
@@ -92,9 +94,9 @@ volatile char previous_button_reading = 0;
 volatile char button_state = 0;
 volatile char current_frame[8];
 volatile char display_buffer[FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS][8];
-const int buffer_size = FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS;
-volatile int buffer_head = -1;
-volatile int buffer_tail = -1;
+const int buffer_length = FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS;
+volatile int buffer_head = -1; // points to front of buffer
+volatile int buffer_tail = -1; // points to next available spot
 
 volatile char current_row = 0;
 volatile char current_col = 0;
@@ -232,10 +234,65 @@ void Configure_LED_Display() {
 	Write_Row_7(GPIO_PIN_RESET);
 }
 
+void Buffer_Clear()
+{
+	buffer_head = 0;
+	buffer_tail = -1; // flag that the buffer is empty
+}
+
+/**
+ * Returns 0 if buffer full, 1 if success
+ */
+char Buffer_Pushback(char frame[])
+{
+	if (buffer_tail == -1) {
+		//buffer is empty, update actual available spot
+		buffer_tail = 0;
+	} else if (buffer_tail == buffer_head)
+	{
+		return 0; // buffer is full
+	}
+
+	int frame_length = sizeof(frame) / sizeof(frame[0]);
+	// copy frame to buffer
+	memcpy(display_buffer[buffer_tail], frame, frame_length);
+
+	buffer_tail++; //increment to next available spot
+	buffer_tail %= buffer_length; // wrap around to beginning of buffer
+
+	return 1; //pushback success
+}
+
+/**
+ * Pops front of buffer and copies to destination. If empty, nothing is copied
+ * Returns 0 if buffer empty, 1 if successfully copied
+ */
+char Buffer_Pop(char dest[])
+{
+	if (buffer_tail == -1)
+	{
+		return 0; //buffer is empty
+	}
+
+	int frame_length = sizeof(display_buffer[buffer_head]) / sizeof(display_buffer[buffer_head][0]);
+		// copy frame to buffer
+	memcpy(dest, display_buffer[buffer_head], frame_length);
+
+	buffer_head++;
+	buffer_head %= buffer_length;
+
+	if (buffer_head == buffer_tail) {
+		//buffer is empty
+		Buffer_Clear();
+	}
+
+	return 1;
+}
+
 /**
  * Initializes buffer with all 0's
  */
-void Init_Buffer()
+void Buffer_Init()
 {
 	int length_of_single_frame = sizeof(current_frame[0]);
 
@@ -244,9 +301,11 @@ void Init_Buffer()
 		all_zeros[i] = 0;
 	}
 
-	for (int i = 0; i < buffer_size; i++) {
+	for (int i = 0; i < buffer_length; i++) {
 		memcpy(display_buffer[i], all_zeros, length_of_single_frame);
 	}
+
+	Buffer_Clear();
 }
 
 /**
@@ -279,7 +338,7 @@ main(int argc, char* argv[])
 	Configure_LED_Display();
 
 	Init_Testing_Image_LED_Array();
-	Init_Buffer();
+	Buffer_Init();
 
 	int previous_state = 0;
 	// Infinite loop
