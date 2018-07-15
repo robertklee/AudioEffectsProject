@@ -237,7 +237,16 @@ void Configure_LED_Display() {
  */
 void Init_Buffer()
 {
+	int length_of_single_frame = sizeof(current_frame[0]);
 
+	char all_zeros[length_of_single_frame];
+	for (int i = 0; i < length_of_single_frame; i++) {
+		all_zeros[i] = 0;
+	}
+
+	for (int i = 0; i < buffer_size; i++) {
+		memcpy(display_buffer[i], all_zeros, length_of_single_frame);
+	}
 }
 
 /**
