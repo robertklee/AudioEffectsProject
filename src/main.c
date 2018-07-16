@@ -465,6 +465,8 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 	// If the current reading is the same as the reading during the previous
 	// interrupt, then the button state is reliable and we feed this to the rest
 	// of the system
+
+	// Check on board button
 	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)) {
 		// button is pressed.
 		if (previous_button_reading_PA0) {
@@ -481,6 +483,63 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 		}
 		//update previous reading to current reading
 		previous_button_reading_PA0 = 0;
+	}
+
+	// Check PC1 button
+	if (HAL_GPIO_ReadPin(GPIOC, BUTTON_1)) {
+			// button is pressed.
+		if (previous_button_reading_PC1) {
+			// if this is consistent with previous reading, set state to 1
+			button_state_PC1 = 1;
+		}
+		//update previous reading to current reading
+		previous_button_reading_PC1 = 1;
+	} else {
+		// button is not pressed
+		if (!previous_button_reading_PC1) {
+			// if this is consistent with previous reading, set state to 0
+			button_state_PC1 = 0;
+		}
+		//update previous reading to current reading
+		previous_button_reading_PC1 = 0;
+	}
+
+	// Check PC4 button
+	if (HAL_GPIO_ReadPin(GPIOC, BUTTON_2)) {
+			// button is pressed.
+		if (previous_button_reading_PC4) {
+			// if this is consistent with previous reading, set state to 1
+			button_state_PC4 = 1;
+		}
+		//update previous reading to current reading
+		previous_button_reading_PC4 = 1;
+	} else {
+		// button is not pressed
+		if (!previous_button_reading_PC4) {
+			// if this is consistent with previous reading, set state to 0
+			button_state_PC4 = 0;
+		}
+		//update previous reading to current reading
+		previous_button_reading_PC4 = 0;
+	}
+
+	// Check PB1 button
+	if (HAL_GPIO_ReadPin(GPIOB, BUTTON_3)) {
+			// button is pressed.
+		if (previous_button_reading_PB1) {
+			// if this is consistent with previous reading, set state to 1
+			button_state_PB1 = 1;
+		}
+		//update previous reading to current reading
+		previous_button_reading_PB1 = 1;
+	} else {
+		// button is not pressed
+		if (!previous_button_reading_PB1) {
+			// if this is consistent with previous reading, set state to 0
+			button_state_PB1 = 0;
+		}
+		//update previous reading to current reading
+		previous_button_reading_PB1 = 0;
 	}
 }
 
