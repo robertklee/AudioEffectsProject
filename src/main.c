@@ -439,20 +439,52 @@ main(int argc, char* argv[])
 
 	HAL_GPIO_WritePin( GPIOD, GPIO_PIN_12, 1);
 
-	int previous_state = 0;
+	int previous_state_PA0 = 0;
+	int previous_state_PC1 = 0;
+	int previous_state_PC4 = 0;
+	int previous_state_PB1 = 0;
 	// Infinite loop
 	while (1)
 	{
 		if (button_state_PA0) {
-			previous_state = 1;
+			previous_state_PA0 = 1;
 		} else {
-			if (previous_state) {
+			if (previous_state_PA0) {
 				//falling edge triggered
-				HAL_GPIO_TogglePin( GPIOD, GPIO_PIN_12);
+				Toggle_LED_Array();
 			}
-			previous_state = 0;
+			previous_state_PA0 = 0;
 		}
-	   // Add your code here.
+
+		if (button_state_PC1) {
+			previous_state_PC1 = 1;
+		} else {
+			if (previous_state_PC1) {
+				//falling edge triggered
+				Toggle_LED_Array();
+			}
+			previous_state_PC1 = 0;
+		}
+
+		if (button_state_PC4) {
+			previous_state_PC4 = 1;
+		} else {
+			if (previous_state_PC4) {
+				//falling edge triggered
+				Toggle_LED_Array();
+			}
+			previous_state_PC4 = 0;
+		}
+
+		if (button_state_PB1) {
+			previous_state_PB1 = 1;
+		} else {
+			if (previous_state_PB1) {
+				//falling edge triggered
+				Toggle_LED_Array();
+			}
+			previous_state_PB1 = 0;
+		}
 	}
 	//TODO add code upon stop execution of program
 }
