@@ -60,6 +60,20 @@
 #pragma GCC diagnostic ignored "-Wmissing-declarations"
 #pragma GCC diagnostic ignored "-Wreturn-type"
 
+/**
+ * LED MATRIX LAYOUT:
+ * ~~~~~~~~~~~TOP OF LED MATRIX~~~~~~~~~~
+ * Rows:	0	1	2	3	4	5	6	7
+ * Columns:
+ * 		0
+ * 		1
+ * 		2
+ * 		3
+ * 		4
+ * 		5
+ * 		6
+ * 		7
+ */
 #define NUMBER_OF_LEDS			(64)
 #define REFRESH_RATE 			(250) // this will be multiplied by 64 since there are 64 LEDs
 #define FRAMES_PER_SECOND 		(25) // this number should be a factor of REFRESH_RATE
@@ -411,6 +425,22 @@ void Test_LED_Array_Cycle_Through() {
 	Buffer_Pushback(frame);
 }
 
+/**
+ * Creates a bar of height 'height' in the specified column 'col'
+ * Col and height must be < NUM_OF_COLS
+ */
+void Create_Column_With_Height(char dest[], int col, int height) {
+	char col_flag = 1 << col;
+	for (int i = 1; i <= NUM_OF_COLS; i++)
+	{
+		if (i <= height) {
+			dest[NUM_OF_COLS - i] = dest[NUM_OF_COLS - i] | col_flag; // force it to be 1
+		} else {
+			dest[NUM_OF_COLS - i] = dest[NUM_OF_COLS - i] & (0xFF ^ (col_flag)); // force it to be 0
+		}
+	}
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -428,10 +458,10 @@ main(int argc, char* argv[])
 	Configure_Ports();
 	Configure_LED_Display();
 
-//	LED_Array_All_On();
-	LED_Array_All_Off();
+	LED_Array_All_On();
+//	LED_Array_All_Off();
 
-	Test_LED_Array_Cycle_Through();
+//	Test_LED_Array_Cycle_Through();
 
 	// Start timers LAST to ensure that no interrupts based on timers will
 	// trigger before initialization of board is complete
@@ -443,6 +473,9 @@ main(int argc, char* argv[])
 	int previous_state_PC1 = 0;
 	int previous_state_PC4 = 0;
 	int previous_state_PB1 = 0;
+
+	int column = 0;
+	int height = 3;
 	// Infinite loop
 	while (1)
 	{
@@ -451,7 +484,12 @@ main(int argc, char* argv[])
 		} else {
 			if (previous_state_PA0) {
 				//falling edge triggered
-				Toggle_LED_Array();
+//				Toggle_LED_Array();
+				Create_Column_With_Height(current_frame, column, height);
+				column++;
+				column %= NUM_OF_COLS;
+				height++;
+				height %= NUM_OF_COLS + 1;
 			}
 			previous_state_PA0 = 0;
 		}
