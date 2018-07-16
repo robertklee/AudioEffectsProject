@@ -1,7 +1,7 @@
 // Copyright (c) 2018 Robert Lee, Declan McIntosh, University of Victoria
 
 /*
- * This file is part of the µOS++ distribution.
+ * This file is part of the ï¿½OS++ distribution.
  *   (https://github.com/micro-os-plus)
  * Copyright (c) 2014 Liviu Ionescu.
  *
@@ -79,22 +79,22 @@
 #define FRAMES_PER_SECOND 		(25) // this number should be a factor of REFRESH_RATE
 #define BUFFER_SIZE_SECONDS 	(10) // number of seconds for which the buffer stores data
 // NOTE: The following row/col are NOT on the same bus
-#define COL_0 					(GPIO_PIN_4)
-#define COL_1 					(GPIO_PIN_2)
-#define COL_2 					(GPIO_PIN_7)
-#define COL_3 					(GPIO_PIN_6)
-#define COL_4					(GPIO_PIN_1)
-#define COL_5 					(GPIO_PIN_0)
-#define COL_6 					(GPIO_PIN_6)
-#define COL_7 					(GPIO_PIN_8)
-#define ROW_0 					(GPIO_PIN_9)
-#define ROW_1 					(GPIO_PIN_11)
-#define ROW_2 					(GPIO_PIN_2)
-#define ROW_3 					(GPIO_PIN_3)
-#define ROW_4 					(GPIO_PIN_7)
-#define ROW_5 					(GPIO_PIN_5)
-#define ROW_6 					(GPIO_PIN_5)
-#define ROW_7 					(GPIO_PIN_6)
+#define ROW_0 					(GPIO_PIN_4)
+#define ROW_1 					(GPIO_PIN_2)
+#define ROW_2 					(GPIO_PIN_7)
+#define ROW_3 					(GPIO_PIN_6)
+#define ROW_4					(GPIO_PIN_1)
+#define ROW_5 					(GPIO_PIN_0)
+#define ROW_6 					(GPIO_PIN_6)
+#define ROW_7 					(GPIO_PIN_8)
+#define COL_0 					(GPIO_PIN_9)
+#define COL_1 					(GPIO_PIN_11)
+#define COL_2 					(GPIO_PIN_2)
+#define COL_3 					(GPIO_PIN_3)
+#define COL_4 					(GPIO_PIN_7)
+#define COL_5 					(GPIO_PIN_5)
+#define COL_6 					(GPIO_PIN_5)
+#define COL_7 					(GPIO_PIN_6)
 #define BUTTON_1				(GPIO_PIN_1)
 #define BUTTON_2				(GPIO_PIN_4)
 #define BUTTON_3				(GPIO_PIN_1)
@@ -232,43 +232,43 @@ void Configure_Ports()
 }
 
 // utility inline functions to encapsulate the bus and port number of the row/col
-inline void Write_Col_0 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, COL_0, new_state); }
-inline void Write_Col_1 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, COL_1, new_state); }
-inline void Write_Col_2 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOB, COL_2, new_state); }
-inline void Write_Col_3 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_3, new_state); }
-inline void Write_Col_4 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_4, new_state); }
-inline void Write_Col_5 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_5, new_state); }
-inline void Write_Col_6 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_6, new_state); }
-inline void Write_Col_7 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_7, new_state); }
-
-inline void Write_Row_0 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_0, new_state); }
-inline void Write_Row_1 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_1, new_state); }
-inline void Write_Row_2 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, ROW_2, new_state); }
+inline void Write_Row_0 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, ROW_0, new_state); }
+inline void Write_Row_1 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, ROW_1, new_state); }
+inline void Write_Row_2 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOB, ROW_2, new_state); }
 inline void Write_Row_3 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, ROW_3, new_state); }
 inline void Write_Row_4 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, ROW_4, new_state); }
-inline void Write_Row_5 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOB, ROW_5, new_state); }
-inline void Write_Row_6 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, ROW_6, new_state); }
-inline void Write_Row_7 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, ROW_7, new_state); }
+inline void Write_Row_5 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, ROW_5, new_state); }
+inline void Write_Row_6 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_6, new_state); }
+inline void Write_Row_7 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, ROW_7, new_state); }
+
+inline void Write_Col_0 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_0, new_state); }
+inline void Write_Col_1 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOC, COL_1, new_state); }
+inline void Write_Col_2 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_2, new_state); }
+inline void Write_Col_3 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_3, new_state); }
+inline void Write_Col_4 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOD, COL_4, new_state); }
+inline void Write_Col_5 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOB, COL_5, new_state); }
+inline void Write_Col_6 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, COL_6, new_state); }
+inline void Write_Col_7 (uint16_t new_state) { HAL_GPIO_WritePin(GPIOE, COL_7, new_state); }
 
 void Configure_LED_Display() {
 	// init all rows and columns as output, medium speed, no pull
-	Init_GPIO_Port_Default_Speed_Pull(COL_0, GPIO_MODE_OUTPUT_PP, 'E');
-	Init_GPIO_Port_Default_Speed_Pull(COL_1, GPIO_MODE_OUTPUT_PP, 'E');
-	Init_GPIO_Port_Default_Speed_Pull(COL_2, GPIO_MODE_OUTPUT_PP, 'B');
-	Init_GPIO_Port_Default_Speed_Pull(COL_3, GPIO_MODE_OUTPUT_PP, 'D');
-	Init_GPIO_Port_Default_Speed_Pull(COL_4, GPIO_MODE_OUTPUT_PP, 'D');
-	Init_GPIO_Port_Default_Speed_Pull(COL_5, GPIO_MODE_OUTPUT_PP, 'D');
-	Init_GPIO_Port_Default_Speed_Pull(COL_6, GPIO_MODE_OUTPUT_PP, 'C');
-	Init_GPIO_Port_Default_Speed_Pull(COL_7, GPIO_MODE_OUTPUT_PP, 'C');
-
-	Init_GPIO_Port_Default_Speed_Pull(ROW_0, GPIO_MODE_OUTPUT_PP, 'C');
-	Init_GPIO_Port_Default_Speed_Pull(ROW_1, GPIO_MODE_OUTPUT_PP, 'C');
-	Init_GPIO_Port_Default_Speed_Pull(ROW_2, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_0, GPIO_MODE_OUTPUT_PP, 'E');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_1, GPIO_MODE_OUTPUT_PP, 'E');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_2, GPIO_MODE_OUTPUT_PP, 'B');
 	Init_GPIO_Port_Default_Speed_Pull(ROW_3, GPIO_MODE_OUTPUT_PP, 'D');
 	Init_GPIO_Port_Default_Speed_Pull(ROW_4, GPIO_MODE_OUTPUT_PP, 'D');
-	Init_GPIO_Port_Default_Speed_Pull(ROW_5, GPIO_MODE_OUTPUT_PP, 'B');
-	Init_GPIO_Port_Default_Speed_Pull(ROW_6, GPIO_MODE_OUTPUT_PP, 'E');
-	Init_GPIO_Port_Default_Speed_Pull(ROW_7, GPIO_MODE_OUTPUT_PP, 'E');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_5, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_6, GPIO_MODE_OUTPUT_PP, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(ROW_7, GPIO_MODE_OUTPUT_PP, 'C');
+
+	Init_GPIO_Port_Default_Speed_Pull(COL_0, GPIO_MODE_OUTPUT_PP, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(COL_1, GPIO_MODE_OUTPUT_PP, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(COL_2, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(COL_3, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(COL_4, GPIO_MODE_OUTPUT_PP, 'D');
+	Init_GPIO_Port_Default_Speed_Pull(COL_5, GPIO_MODE_OUTPUT_PP, 'B');
+	Init_GPIO_Port_Default_Speed_Pull(COL_6, GPIO_MODE_OUTPUT_PP, 'E');
+	Init_GPIO_Port_Default_Speed_Pull(COL_7, GPIO_MODE_OUTPUT_PP, 'E');
 
 	// turn off all columns
 	Write_Col_0(GPIO_PIN_RESET);
