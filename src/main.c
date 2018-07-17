@@ -1,4 +1,5 @@
-// Copyright (c) 2018 Robert Lee, Declan McIntosh, University of Victoria
+// Copyright (c) 2018 Robert Lee, Declan McIntosh
+// University of Victoria ECE 299 Design Project
 
 /*
  * This file is part of the �OS++ distribution.
@@ -63,8 +64,8 @@
 /**
  * LED MATRIX LAYOUT:
  * ~~~~~~~~~~~TOP OF LED MATRIX~~~~~~~~~~
- * Rows:	0	1	2	3	4	5	6	7
- * Columns:
+ * Columns:	0	1	2	3	4	5	6	7
+ * Rows:
  * 		0
  * 		1
  * 		2
