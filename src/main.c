@@ -720,13 +720,13 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 {
 	__HAL_TIM_CLEAR_FLAG( &LEDDisplayTimer, TIM_IT_UPDATE ); //clear flag status
 
-	if (current_row == 8) {
+	if (current_row == NUM_OF_COLS) {
 		// at end of rows, need to advance to next column
 
 		current_col++; //advance to next column
 		current_row = 0; //restart row
 
-		if (current_col == 8) {
+		if (current_col == NUM_OF_COLS) {
 //TODO BUG potentially
 			current_frame_number++;
 			if (current_frame_number > times_to_repeat_frame) {
@@ -782,36 +782,36 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 	// for each case, turn off previous row, turn on current row
 	switch(current_row) {
 		case 0:
-			Write_Row_7(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_0(GPIO_PIN_SET); }
+			Write_Row_7(GPIO_PIN_RESET);
 			break;
 		case 1:
-			Write_Row_0(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_1(GPIO_PIN_SET); }
+			Write_Row_0(GPIO_PIN_RESET);
 			break;
 		case 2:
-			Write_Row_1(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_2(GPIO_PIN_SET); }
+			Write_Row_1(GPIO_PIN_RESET);
 			break;
 		case 3:
-			Write_Row_2(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_3(GPIO_PIN_SET); }
+			Write_Row_2(GPIO_PIN_RESET);
 			break;
 		case 4:
-			Write_Row_3(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_4(GPIO_PIN_SET); }
+			Write_Row_3(GPIO_PIN_RESET);
 			break;
 		case 5:
-			Write_Row_4(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_5(GPIO_PIN_SET); }
+			Write_Row_4(GPIO_PIN_RESET);
 			break;
 		case 6:
-			Write_Row_5(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_6(GPIO_PIN_SET); }
+			Write_Row_5(GPIO_PIN_RESET);
 			break;
 		case 7:
-			Write_Row_6(GPIO_PIN_RESET);
 			if (current_frame[current_col] & 1 << current_row) { Write_Row_7(GPIO_PIN_SET); }
+			Write_Row_6(GPIO_PIN_RESET);
 			break;
 		default:
 			//Should never enter this
