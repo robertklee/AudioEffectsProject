@@ -75,7 +75,7 @@
  * 		7
  */
 #define NUMBER_OF_LEDS			(64)
-#define REFRESH_RATE 			(250) // this will be multiplied by 64 since there are 64 LEDs
+#define REFRESH_RATE 			(250)//5000 will reduce the high pitched noise // this will be multiplied by 64 since there are 64 LEDs
 #define FRAMES_PER_SECOND 		(25) // this number should be a factor of REFRESH_RATE
 #define BUFFER_SIZE_SECONDS 	(10) // number of seconds for which the buffer stores data
 // NOTE: The following row/col are NOT on the same bus
@@ -98,6 +98,11 @@
 #define BUTTON_1				(GPIO_PIN_1)
 #define BUTTON_2				(GPIO_PIN_4)
 #define BUTTON_3				(GPIO_PIN_1)
+
+#define LEFT_TO_RIGHT			(0)
+#define RIGHT_TO_LEFT			(1)
+#define TOP_TO_BOTTOM			(2)
+#define BOTTOM_TO_TOP			(3)
 
 #define R0						(0)
 #define R1						(1)
@@ -441,6 +446,97 @@ void Create_Column_With_Height(char dest[], int col, int height) {
 	}
 }
 
+/**
+ * source is _source[frame number]
+ * _source_length is the number of frames
+ * message_length is the total number of columns in the message
+ * direction is the direction the image pans
+ */
+void Fill_Buffer_With_Panning_Image(void* _source, int _source_length,
+		int message_length, int direction) {
+	char frame[NUM_OF_COLS];
+
+	char (*source)[_source_length] = _source;
+
+	// Zero out the frame
+	for (int i = 0; i < NUM_OF_COLS; i++) {
+		frame[i] = 0;
+	}
+
+	// Start with blank frame
+	Buffer_Pushback(frame);
+
+	for (int current_index = 0; current_index < message_length;
+			current_index++) {
+		int source_index = current_index / NUM_OF_COLS;
+		int source_frame_index = current_index % NUM_OF_COLS;
+
+		switch (direction) {
+		case (LEFT_TO_RIGHT):
+			for (int i = 0; i < NUM_OF_COLS; i++) {
+				frame[i] = frame[i] << 1;
+
+				char source_char = source[source_index][i];
+				// truncate everything right of column
+				char right_shifted = source_char >> (NUM_OF_COLS - 1 - source_frame_index);
+
+	 			// remove everything left of column
+				char right_col_only = right_shifted & (0xFE ^ 0xFF);
+
+				// add in only the right column
+				frame[i] = frame[i] | right_col_only;
+			}
+			break;
+		case (BOTTOM_TO_TOP):
+			for (int i = 0; i < NUM_OF_COLS - 1; i++) {
+				// shift rows up by one
+				frame[i] = frame[i + 1];
+			}
+
+			// add in new row at bottom
+			frame[NUM_OF_COLS - 1] = source[source_index][source_frame_index];
+			break;
+		default:
+			trace_printf("Invalid direction.");
+			break;
+		}
+
+		Buffer_Pushback(frame);
+		Buffer_Pushback(frame);
+	}
+}
+
+/**
+    111       111       111       111
+  11   11   11   11   11   11   11   11
+ 1       1 1       1 1       1 1       1
+1         1         1         1         1
+ 1       1 1       1 1       1 1       1
+  11   11   11   11   11   11   11   11
+    111       111       111       111
+
+or in hex:
+
+0x0e	0x03	0x80	0xe0	0x38	0x00
+0x31	0x8c	0x63	0x18	0xc6	0x00
+0x40	0x50	0x14	0x05	0x01	0x00
+0x80	0x20	0x08	0x02	0x00	0x80
+0x40	0x50	0x14	0x05	0x01	0x00
+0x31	0x8c	0x63	0x18	0xc6	0x00
+0x0e	0x03	0x80	0xe0	0x38	0x00
+0x00	0x00	0x00	0x00	0x00	0x00
+ */
+void Create_Sine_Wave() {
+	char sine_wave[6][NUM_OF_COLS] = {
+			{ 0x0e, 0x31, 0x40, 0x80, 0x40, 0x31, 0x0e, 0x00 },
+			{ 0x03, 0x8c, 0x50, 0x20, 0x50, 0x8c, 0x03, 0x00 },
+			{ 0x80, 0x63, 0x14, 0x08, 0x14, 0x63, 0x80, 0x00 },
+			{ 0xe0, 0x18, 0x05, 0x02, 0x05, 0x18, 0xe0, 0x00 },
+			{ 0x38, 0xc6, 0x01, 0x00, 0x01, 0xc6, 0x38, 0x00 },
+			{ 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00 } };
+	Fill_Buffer_With_Panning_Image(sine_wave, 6, 41, LEFT_TO_RIGHT);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -458,10 +554,12 @@ main(int argc, char* argv[])
 	Configure_Ports();
 	Configure_LED_Display();
 
-	LED_Array_All_On();
-//	LED_Array_All_Off();
+//	LED_Array_All_On();
+	LED_Array_All_Off();
 
 //	Test_LED_Array_Cycle_Through();
+
+	Create_Sine_Wave();
 
 	// Start timers LAST to ensure that no interrupts based on timers will
 	// trigger before initialization of board is complete
