@@ -452,11 +452,11 @@ void Create_Column_With_Height(char dest[], int col, int height) {
  * message_length is the total number of columns in the message
  * direction is the direction the image pans
  */
-void Fill_Buffer_With_Panning_Image(void* _source, int _source_length,
+void Fill_Buffer_With_Panning_Image(uint32_t _source_rows, uint32_t _source_cols, char source[_source_rows][_source_cols],
 		int message_length, int direction) {
 	char frame[NUM_OF_COLS];
 
-	char (*source)[_source_length] = _source;
+//	char (*source)[_source_length] = _source;
 
 	// Zero out the frame
 	for (int i = 0; i < NUM_OF_COLS; i++) {
@@ -469,6 +469,7 @@ void Fill_Buffer_With_Panning_Image(void* _source, int _source_length,
 	for (int current_index = 0; current_index < message_length;
 			current_index++) {
 		int source_index = current_index / NUM_OF_COLS;
+		if (source_index >= _source_rows) { break; }
 		int source_frame_index = current_index % NUM_OF_COLS;
 
 		switch (direction) {
@@ -533,8 +534,9 @@ void Create_Sine_Wave() {
 			{ 0x80, 0x63, 0x14, 0x08, 0x14, 0x63, 0x80, 0x00 },
 			{ 0xe0, 0x18, 0x05, 0x02, 0x05, 0x18, 0xe0, 0x00 },
 			{ 0x38, 0xc6, 0x01, 0x00, 0x01, 0xc6, 0x38, 0x00 },
-			{ 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00 } };
-	Fill_Buffer_With_Panning_Image(sine_wave, 6, 41, LEFT_TO_RIGHT);
+			{ 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00 },
+			{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
+	Fill_Buffer_With_Panning_Image(7, NUM_OF_COLS, sine_wave, 49, LEFT_TO_RIGHT);
 }
 
 int
