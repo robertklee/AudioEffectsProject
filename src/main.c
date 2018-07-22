@@ -88,7 +88,7 @@
  * 		7
  */
 #define NUMBER_OF_LEDS			(64)
-#define REFRESH_RATE 			(250)//5000 will reduce the high pitched noise // this will be multiplied by 64 since there are 64 LEDs
+#define REFRESH_RATE 			(5000)//5000 will reduce the high pitched noise // this will be multiplied by 64 since there are 64 LEDs
 #define FRAMES_PER_SECOND 		(25) // this number should be a factor of REFRESH_RATE
 #define BUFFER_SIZE_SECONDS 	(10) // number of seconds for which the buffer stores data
 // NOTE: The following row/col are NOT on the same bus
@@ -219,7 +219,8 @@ DAC_HandleTypeDef
 
 ADC_HandleTypeDef
 	AudioAdc,
-	ReferenceAdc;
+	ReferenceAdc,
+	PitchShiftOffsetAdc;
 
 
 volatile int
@@ -1033,11 +1034,14 @@ main(int argc, char* argv[])
 			if (previous_state_PA0) {
 				//falling edge triggered
 //				Toggle_LED_Array();
-				Create_Column_With_Height(current_frame, column, height);
-				column++;
-				column %= NUM_OF_COLS;
-				height++;
-				height %= NUM_OF_COLS + 1;
+//				Create_Column_With_Height(current_frame, column, height);
+//				column++;
+//				column %= NUM_OF_COLS;
+//				height++;
+//				height %= NUM_OF_COLS + 1;
+
+				Buffer_Clear();
+				Create_Sine_Wave();
 			}
 			previous_state_PA0 = 0;
 		}
@@ -1203,38 +1207,39 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 		}
 	}
 
+	char enable_row = current_frame[current_col] & 1 << current_row;
 	// for each case, turn off previous row, turn on current row
 	switch(current_row) {
 		case 0:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_0(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_0(GPIO_PIN_SET); }
 			Write_Row_7(GPIO_PIN_RESET);
 			break;
 		case 1:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_1(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_1(GPIO_PIN_SET); }
 			Write_Row_0(GPIO_PIN_RESET);
 			break;
 		case 2:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_2(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_2(GPIO_PIN_SET); }
 			Write_Row_1(GPIO_PIN_RESET);
 			break;
 		case 3:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_3(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_3(GPIO_PIN_SET); }
 			Write_Row_2(GPIO_PIN_RESET);
 			break;
 		case 4:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_4(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_4(GPIO_PIN_SET); }
 			Write_Row_3(GPIO_PIN_RESET);
 			break;
 		case 5:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_5(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_5(GPIO_PIN_SET); }
 			Write_Row_4(GPIO_PIN_RESET);
 			break;
 		case 6:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_6(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_6(GPIO_PIN_SET); }
 			Write_Row_5(GPIO_PIN_RESET);
 			break;
 		case 7:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_7(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_7(GPIO_PIN_SET); }
 			Write_Row_6(GPIO_PIN_RESET);
 			break;
 		default:
@@ -1319,7 +1324,7 @@ void InitSystemPeripherals( void )
 //
 // Enable GPIO port C1, C2 and C5 as an analog input
 //
-	GpioInitStructure.Pin = GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_5;
+	GpioInitStructure.Pin = GPIO_PIN_2 | GPIO_PIN_5; //GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_5;
 	GpioInitStructure.Mode = GPIO_MODE_ANALOG;
 	GpioInitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
 	GpioInitStructure.Pull = GPIO_NOPULL;
@@ -1375,6 +1380,36 @@ void InitSystemPeripherals( void )
 	ReferenceAdc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
 	HAL_ADC_Init( &ReferenceAdc );
 	HAL_ADC_Start( &ReferenceAdc );
+
+//
+// Configure level shifting reference A/D (ADC3)
+//
+	PitchShiftOffsetAdc.Instance = ADC3;
+	PitchShiftOffsetAdc.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
+	PitchShiftOffsetAdc.Init.Resolution = ADC_RESOLUTION_12B;
+	PitchShiftOffsetAdc.Init.ScanConvMode = DISABLE;
+	PitchShiftOffsetAdc.Init.ContinuousConvMode = DISABLE;
+	PitchShiftOffsetAdc.Init.DiscontinuousConvMode = DISABLE;
+	PitchShiftOffsetAdc.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_T1_CC1;
+	PitchShiftOffsetAdc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+	PitchShiftOffsetAdc.Init.NbrOfConversion = 1;
+	PitchShiftOffsetAdc.Init.NbrOfDiscConversion = 0;
+	PitchShiftOffsetAdc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+	PitchShiftOffsetAdc.Init.DMAContinuousRequests = DISABLE;
+	PitchShiftOffsetAdc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+	HAL_ADC_Init( &PitchShiftOffsetAdc );
+	HAL_ADC_Start( &PitchShiftOffsetAdc );
+
+//
+// Select PORTA pin 2 ( ADC_CHANNEL_2 ) for the audio stream
+//
+	sConfig.Channel = ADC_CHANNEL_2;
+	sConfig.Rank = 1;
+	sConfig.SamplingTime = ADC_SAMPLETIME_112CYCLES;
+	sConfig.Offset = 0;
+
+	HAL_ADC_ConfigChannel(&PitchShiftOffsetAdc, &sConfig);
+	HAL_ADC_Start( &PitchShiftOffsetAdc );
 
 //
 // Initialize timer to 16Khz
@@ -1457,6 +1492,29 @@ int ConvertReference(void)
 // Get the 12 bit result
 //
     ADCResult = HAL_ADC_GetValue( &ReferenceAdc );
+
+    return(ADCResult);
+}
+
+int ConvertPitchShiftOffset(void)
+{
+	int
+		ADCResult;
+
+//
+// Start a conversion
+//
+	HAL_ADC_Start( &PitchShiftOffsetAdc );
+
+//
+// Wait for end of conversion
+//
+    HAL_ADC_PollForConversion( &PitchShiftOffsetAdc, HAL_MAX_DELAY );
+
+//
+// Get the 12 bit result
+//
+    ADCResult = HAL_ADC_GetValue( &PitchShiftOffsetAdc );
 
     return(ADCResult);
 }
