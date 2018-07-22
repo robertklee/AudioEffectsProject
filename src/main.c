@@ -783,38 +783,39 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 		}
 	}
 
+	char enable_row = current_frame[current_row] & 1 << current_col;
 	// for each case, turn off previous row, turn on current row
 	switch(current_row) {
 		case 0:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_0(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_0(GPIO_PIN_SET); }
 			Write_Row_7(GPIO_PIN_RESET);
 			break;
 		case 1:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_1(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_1(GPIO_PIN_SET); }
 			Write_Row_0(GPIO_PIN_RESET);
 			break;
 		case 2:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_2(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_2(GPIO_PIN_SET); }
 			Write_Row_1(GPIO_PIN_RESET);
 			break;
 		case 3:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_3(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_3(GPIO_PIN_SET); }
 			Write_Row_2(GPIO_PIN_RESET);
 			break;
 		case 4:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_4(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_4(GPIO_PIN_SET); }
 			Write_Row_3(GPIO_PIN_RESET);
 			break;
 		case 5:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_5(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_5(GPIO_PIN_SET); }
 			Write_Row_4(GPIO_PIN_RESET);
 			break;
 		case 6:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_6(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_6(GPIO_PIN_SET); }
 			Write_Row_5(GPIO_PIN_RESET);
 			break;
 		case 7:
-			if (current_frame[current_col] & 1 << current_row) { Write_Row_7(GPIO_PIN_SET); }
+			if (enable_row) { Write_Row_7(GPIO_PIN_SET); }
 			Write_Row_6(GPIO_PIN_RESET);
 			break;
 		default:
