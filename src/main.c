@@ -38,8 +38,9 @@
 #include "ctype.h"
 #include <sys/stat.h>
 #include "stm32f4xx_hal.h"
-
 #include <string.h> //for memcpy
+
+// TODO move #define to header
 
 // ----------------------------------------------------------------------------
 //
@@ -134,6 +135,10 @@
 #define TIM5_PRIORITY	 		(0)
 #define NUM_OF_COLS				(8)
 
+#define NO_EFFECT				(0)
+#define ENABLE_ECHO				(1)
+#define ENABLE_PITCH_SHIFT		(1)
+
 volatile char previous_button_reading_PA0 = 0;
 volatile char button_state_PA0 = 0;
 volatile char previous_button_reading_PC1 = 0;
@@ -142,6 +147,10 @@ volatile char previous_button_reading_PC4 = 0;
 volatile char button_state_PC4 = 0;
 volatile char previous_button_reading_PB1 = 0;
 volatile char button_state_PB1 = 0;
+
+char previous_state_PC1 = 0;
+char previous_state_PC4 = 0;
+char previous_state_PB1 = 0;
 
 volatile char current_frame[NUM_OF_COLS];
 volatile char display_buffer[FRAMES_PER_SECOND * BUFFER_SIZE_SECONDS][NUM_OF_COLS];
@@ -154,7 +163,9 @@ volatile char current_col = 0;
 volatile int current_frame_number = 0;
 const int times_to_repeat_frame = REFRESH_RATE / FRAMES_PER_SECOND;
 
-int LED_Array_State = 0;
+int LED_Array_State = 0; //TODO remove after functional test demo
+int pitch_shift_state = NO_EFFECT;
+int echo_state = NO_EFFECT;
 
 void Init_GPIO_Port(uint32_t pin, uint32_t mode, uint32_t speed, uint32_t pull, char bus)
 {
@@ -433,7 +444,7 @@ void Test_LED_Array_Cycle_Through() {
 
 /**
  * Creates a bar of height 'height' in the specified column 'col'
- * Col and height must be < NUM_OF_COLS
+ * Col and height must be <= NUM_OF_COLS
  */
 void Create_Column_With_Height(char dest[], int col, int height) {
 	char col_flag = 1 << col;
@@ -453,7 +464,7 @@ void Create_Column_With_Height(char dest[], int col, int height) {
  * message_length is the total number of columns in the message
  * direction is the direction the image pans
  */
-void Fill_Buffer_With_Panning_Image(uint32_t _source_rows, uint32_t _source_cols, char source[_source_rows][_source_cols],
+void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char source[_source_rows][_source_cols],
 		int message_length, int direction) {
 	char frame[NUM_OF_COLS];
 
@@ -467,8 +478,7 @@ void Fill_Buffer_With_Panning_Image(uint32_t _source_rows, uint32_t _source_cols
 	// Start with blank frame
 	Buffer_Pushback(frame);
 
-	for (int current_index = 0; current_index < message_length;
-			current_index++) {
+	for (int current_index = 0; current_index < message_length; current_index++) {
 		int source_index = current_index / NUM_OF_COLS;
 		if (source_index >= _source_rows) { break; }
 		int source_frame_index = current_index % NUM_OF_COLS;
@@ -529,7 +539,7 @@ or in hex:
 0x00	0x00	0x00	0x00	0x00	0x00
  */
 void Create_Sine_Wave() {
-	char sine_wave[6][NUM_OF_COLS] = {
+	char sine_wave[7][NUM_OF_COLS] = {
 			{ 0x0e, 0x31, 0x40, 0x80, 0x40, 0x31, 0x0e, 0x00 },
 			{ 0x03, 0x8c, 0x50, 0x20, 0x50, 0x8c, 0x03, 0x00 },
 			{ 0x80, 0x63, 0x14, 0x08, 0x14, 0x63, 0x80, 0x00 },
@@ -538,6 +548,58 @@ void Create_Sine_Wave() {
 			{ 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00 },
 			{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
 	Fill_Buffer_With_Panning_Image(7, NUM_OF_COLS, sine_wave, 49, LEFT_TO_RIGHT);
+}
+
+void Display_Mode() {
+	if (pitch_shift_state == ENABLE_PITCH_SHIFT && echo_state == ENABLE_ECHO) {
+		// TODO draw on screen
+	} else if (pitch_shift_state) {
+		// TODO draw on screen
+	} else if (echo_state) {
+		// TODO draw on screen
+	} else {
+		// TODO draw on screen
+	}
+
+}
+
+void Update_State()
+{
+	if (button_state_PC1) {
+		previous_state_PC1 = 1;
+	} else {
+		if (previous_state_PC1) {
+			//falling edge triggered
+			Toggle_LED_Array();
+
+			pitch_shift_state = !(pitch_shift_state);
+		}
+		previous_state_PC1 = 0;
+	}
+
+	if (button_state_PC4) {
+		previous_state_PC4 = 1;
+	} else {
+		if (previous_state_PC4) {
+			//falling edge triggered
+			Toggle_LED_Array();
+
+			echo_state = !(echo_state);
+		}
+		previous_state_PC4 = 0;
+	}
+
+	if (button_state_PB1) {
+		previous_state_PB1 = 1;
+	} else {
+		if (previous_state_PB1) {
+			//falling edge triggered
+			Toggle_LED_Array();
+
+			Display_Mode();
+		}
+		previous_state_PB1 = 0;
+	}
 }
 
 int
@@ -571,9 +633,6 @@ main(int argc, char* argv[])
 	HAL_GPIO_WritePin( GPIOD, GPIO_PIN_12, 1);
 
 	int previous_state_PA0 = 0;
-	int previous_state_PC1 = 0;
-	int previous_state_PC4 = 0;
-	int previous_state_PB1 = 0;
 
 	int column = 0;
 	int height = 3;
@@ -595,35 +654,7 @@ main(int argc, char* argv[])
 			previous_state_PA0 = 0;
 		}
 
-		if (button_state_PC1) {
-			previous_state_PC1 = 1;
-		} else {
-			if (previous_state_PC1) {
-				//falling edge triggered
-				Toggle_LED_Array();
-			}
-			previous_state_PC1 = 0;
-		}
-
-		if (button_state_PC4) {
-			previous_state_PC4 = 1;
-		} else {
-			if (previous_state_PC4) {
-				//falling edge triggered
-				Toggle_LED_Array();
-			}
-			previous_state_PC4 = 0;
-		}
-
-		if (button_state_PB1) {
-			previous_state_PB1 = 1;
-		} else {
-			if (previous_state_PB1) {
-				//falling edge triggered
-				Toggle_LED_Array();
-			}
-			previous_state_PB1 = 0;
-		}
+		Update_State();
 	}
 	//TODO add code upon stop execution of program
 }
@@ -716,8 +747,7 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 
 /**
  * WARNING: The LED array MUST be advanced from
- * decreasing rows and columns to increasing rows/columns
- * as the logic is optimized for that situation
+ * increasing rows and columns
  */
 void TIM4_IRQHandler() //Timer4 interrupt function
 {
