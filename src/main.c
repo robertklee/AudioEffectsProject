@@ -108,7 +108,7 @@
 #define COL_5 					(GPIO_PIN_5)
 #define COL_6 					(GPIO_PIN_5)
 #define COL_7 					(GPIO_PIN_6)
-#define BUTTON_1				(GPIO_PIN_1)
+#define BUTTON_1				(GPIO_PIN_11)
 #define BUTTON_2				(GPIO_PIN_4)
 #define BUTTON_3				(GPIO_PIN_1)
 
@@ -152,14 +152,14 @@
 
 volatile char previous_button_reading_PA0 = 0;
 volatile char button_state_PA0 = 0;
-volatile char previous_button_reading_PC1 = 0;
-volatile char button_state_PC1 = 0;
+volatile char previous_button_reading_PB11 = 0;
+volatile char button_state_PB11 = 0;
 volatile char previous_button_reading_PC4 = 0;
 volatile char button_state_PC4 = 0;
 volatile char previous_button_reading_PB1 = 0;
 volatile char button_state_PB1 = 0;
 
-char previous_state_PC1 = 0;
+char previous_state_PB11 = 0;
 char previous_state_PC4 = 0;
 char previous_state_PB1 = 0;
 
@@ -327,7 +327,7 @@ void Configure_Ports()
 	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_12, GPIO_MODE_OUTPUT_PP, 'D');
 	Init_GPIO_Port_Default_Speed_Pull(GPIO_PIN_0, GPIO_MODE_INPUT, 'A');
 
-	Init_GPIO_Port_Default_Speed_Pull(BUTTON_1, GPIO_MODE_INPUT, 'C');
+	Init_GPIO_Port_Default_Speed_Pull(BUTTON_1, GPIO_MODE_INPUT, 'B');
 	Init_GPIO_Port_Default_Speed_Pull(BUTTON_2, GPIO_MODE_INPUT, 'C');
 	Init_GPIO_Port_Default_Speed_Pull(BUTTON_3, GPIO_MODE_INPUT, 'B');
 }
@@ -654,16 +654,16 @@ void Display_Mode() {
 
 void Update_State()
 {
-	if (button_state_PC1) {
-		previous_state_PC1 = 1;
+	if (button_state_PB11) {
+		previous_state_PB11 = 1;
 	} else {
-		if (previous_state_PC1) {
+		if (previous_state_PB11) {
 			//falling edge triggered
 			Toggle_LED_Array();
 
 			pitch_shift_state = !(pitch_shift_state);
 		}
-		previous_state_PC1 = 0;
+		previous_state_PB11 = 0;
 	}
 
 	if (button_state_PC4) {
@@ -1082,22 +1082,22 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 	}
 
 	// Check PC1 button
-	if (HAL_GPIO_ReadPin(GPIOC, BUTTON_1)) {
+	if (HAL_GPIO_ReadPin(GPIOB, BUTTON_1)) {
 			// button is pressed.
-		if (previous_button_reading_PC1) {
+		if (previous_button_reading_PB11) {
 			// if this is consistent with previous reading, set state to 1
-			button_state_PC1 = 1;
+			button_state_PB11 = 1;
 		}
 		//update previous reading to current reading
-		previous_button_reading_PC1 = 1;
+		previous_button_reading_PB11 = 1;
 	} else {
 		// button is not pressed
-		if (!previous_button_reading_PC1) {
+		if (!previous_button_reading_PB11) {
 			// if this is consistent with previous reading, set state to 0
-			button_state_PC1 = 0;
+			button_state_PB11 = 0;
 		}
 		//update previous reading to current reading
-		previous_button_reading_PC1 = 0;
+		previous_button_reading_PB11 = 0;
 	}
 
 	// Check PC4 button
