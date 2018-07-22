@@ -723,13 +723,13 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 {
 	__HAL_TIM_CLEAR_FLAG( &LEDDisplayTimer, TIM_IT_UPDATE ); //clear flag status
 
-	if (current_row == NUM_OF_COLS) {
+	if (current_row >= NUM_OF_COLS) {
 		// at end of rows, need to advance to next column
 
 		current_col++; //advance to next column
 		current_row = 0; //restart row
 
-		if (current_col == NUM_OF_COLS) {
+		if (current_col >= NUM_OF_COLS) {
 //TODO BUG potentially
 			current_frame_number++;
 			if (current_frame_number > times_to_repeat_frame) {
