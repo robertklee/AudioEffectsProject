@@ -730,14 +730,15 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 		current_row = 0; //restart row
 
 		if (current_col >= NUM_OF_COLS) {
-//TODO BUG potentially
+			// if the image has been displayed more than the number of times required
+			// to achieve the desired REFRESH_RATE, pull the next image from buffer
 			current_frame_number++;
 			if (current_frame_number > times_to_repeat_frame) {
-				current_frame_number = 0;
-
 				Buffer_Pop(current_frame);
+
+				current_frame_number = 0; //restart counting
 			}
-			current_col = 0;
+			current_col = 0; //restart column
 		}
 
 		// columns only need to be updated when the column number updates
