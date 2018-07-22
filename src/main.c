@@ -150,22 +150,6 @@
 #define ENABLE_ECHO				(1)
 #define ENABLE_PITCH_SHIFT		(1)
 
-#define SEGMENT_A 				( GPIO_PIN_0 )
-#define SEGMENT_B				( GPIO_PIN_0 )
-#define SEGMENT_C				( GPIO_PIN_0 )
-#define SEGMENT_D				( GPIO_PIN_0 )
-#define SEGMENT_E				( GPIO_PIN_0 )
-#define SEGMENT_F				( GPIO_PIN_0 )
-#define SEGMENT_G				( GPIO_PIN_0 )
-
-#define LED_DIGIT_1 			( GPIO_PIN_0 )
-#define LED_DIGIT_2				( GPIO_PIN_0 )
-#define LED_DIGIT_3				( GPIO_PIN_0 )
-#define LED_DIGIT_4				( GPIO_PIN_0 )
-
-#define SWITCH_1				( GPIO_PIN_0 )
-#define SWITCH_2				( GPIO_PIN_0 )
-
 volatile char previous_button_reading_PA0 = 0;
 volatile char button_state_PA0 = 0;
 volatile char previous_button_reading_PC1 = 0;
@@ -195,14 +179,6 @@ int pitch_shift_state = NO_EFFECT;
 int echo_state = NO_EFFECT;
 
 
-
-uint16_t
-	LedBuffer[4] = {};
-
-
-volatile uint16_t
-	LedRefreshCount = 0,
-	LedDisplayedDigit = 0;
 
 volatile int16_t
 	EchoBuffer[16384];
@@ -534,17 +510,17 @@ void Test_LED_Array_Cycle_Through() {
 	}
 	for (int currentLED = 0; currentLED < NUMBER_OF_LEDS; currentLED++)
 	{
-		int col = currentLED/NUM_OF_COLS;
-		int row = currentLED%NUM_OF_COLS;
+		int row = currentLED/NUM_OF_COLS;
+		int col = currentLED%NUM_OF_COLS;
 
-		frame[col] = 1 << row;
+		frame[row] = 1 << col;
 
 		for (int i = 0; i < framesToRepeat; i++)
 		{
 			Buffer_Pushback(frame);
 		}
 
-		frame[col] = 0;
+		frame[row] = 0;
 	}
 
 	for (int i = 0; i < NUM_OF_COLS; i++) {
@@ -715,29 +691,6 @@ void Update_State()
 }
 
 
-
-/*
- * Name: UpdateLedDisplay
- *
- * Description: Update a specific seven segment digit on the 4 digit display
- *
- * Inputs:
- * 		None
- *
- * Output:
- * 		None
- *
- * Process:
- *
- * 		Display the selected digit and advance to the next digit
- * 		Refresh the display at a rate with no flicker
- *
- */
-
-void UpdateLedDisplay( void )
-{
-
-}
 
 /*
  * Name: TIM5_IRQHandler
@@ -926,24 +879,6 @@ void TIM5_IRQHandler(void)
 // Start another conversion
 //
 		HAL_ADC_Start( &AudioAdc );
-
-//
-// Update the multiplexing LED display
-//
-
-		UpdateLedDisplay();
-
-//
-// Button push detection with debounce
-//
-		if ( HAL_GPIO_ReadPin( GPIOD, SWITCH_1 ) == GPIO_PIN_RESET )
-		{
-
-		}
-		else
-		{
-
-		}
 
 
 
@@ -1335,33 +1270,6 @@ void InitSystemPeripherals( void )
 	__HAL_RCC_GPIOD_CLK_ENABLE();
 	__HAL_RCC_GPIOB_CLK_ENABLE();
 
-	GpioInitStructure.Pin = SEGMENT_A | SEGMENT_B | SEGMENT_C | SEGMENT_D | SEGMENT_E | SEGMENT_F | SEGMENT_G;
-	GpioInitStructure.Mode = GPIO_MODE_OUTPUT_PP;
-	GpioInitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
-	GpioInitStructure.Pull = GPIO_PULLUP;
-	GpioInitStructure.Alternate = 0;
-	HAL_GPIO_Init(GPIOD, &GpioInitStructure );
-
-	GpioInitStructure.Pin = LED_DIGIT_1 | LED_DIGIT_2 | LED_DIGIT_3 | LED_DIGIT_4;
-	GpioInitStructure.Mode = GPIO_MODE_OUTPUT_PP;
-	GpioInitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
-	GpioInitStructure.Pull = GPIO_PULLUP;
-	GpioInitStructure.Alternate = 0;
-	HAL_GPIO_Init(GPIOB, &GpioInitStructure );
-
-
-
-
-//
-// Enable GPIO Port E8 as an input ( used for button select options )
-//
-
-	GpioInitStructure.Pin = SWITCH_1 | SWITCH_2;
-	GpioInitStructure.Mode = GPIO_MODE_INPUT;
-	GpioInitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
-	GpioInitStructure.Pull = GPIO_PULLUP;
-	GpioInitStructure.Alternate = 0;
-	HAL_GPIO_Init(GPIOD, &GpioInitStructure );
 
 //
 // Enable GPIO Port E15 as an output ( used for timing with scope )
