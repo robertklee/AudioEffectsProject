@@ -1039,9 +1039,6 @@ main(int argc, char* argv[])
 
 	int previous_state_PA0 = 0;
 
-	int column = 0;
-	int height = 3;
-
 //
 //	Take an Offset reading to remove the DC offset from the analog reading
 //  Source PC2 ( ADC_CHANNEL_12 )
@@ -1056,13 +1053,6 @@ main(int argc, char* argv[])
 		} else {
 			if (previous_state_PA0) {
 				//falling edge triggered
-//				Toggle_LED_Array();
-//				Create_Column_With_Height(current_frame, column, height);
-//				column++;
-//				column %= NUM_OF_COLS;
-//				height++;
-//				height %= NUM_OF_COLS + 1;
-
 				Buffer_Clear();
 				Create_Sine_Wave();
 			}
@@ -1380,7 +1370,6 @@ void InitSystemPeripherals( void )
 // Select PORTC pin 5 ( ADC_CHANNEL_15 ) for the audio stream
 //
 	sConfig.Channel = ADC_CHANNEL_15;
-//	sConfig.Channel = ADC_CHANNEL_11;
 	sConfig.Rank = 1;
 	sConfig.SamplingTime = ADC_SAMPLETIME_112CYCLES;
 	sConfig.Offset = 0;
