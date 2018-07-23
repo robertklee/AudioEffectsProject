@@ -178,7 +178,7 @@ int LED_Array_State = 0; //TODO remove after functional test demo
 int pitch_shift_state = NO_EFFECT;
 int echo_state = NO_EFFECT;
 
-
+volatile int pitch_shift_offset = 0;
 
 volatile int16_t
 	EchoBuffer[16384];
@@ -973,6 +973,29 @@ void PitchShift( float *Buffer )
 	}
 }
 
+int ConvertPitchShiftOffset(void)
+{
+	int
+		ADCResult;
+
+//
+// Start a conversion
+//
+	HAL_ADC_Start( &PitchShiftOffsetAdc );
+
+//
+// Wait for end of conversion
+//
+    HAL_ADC_PollForConversion( &PitchShiftOffsetAdc, HAL_MAX_DELAY );
+
+//
+// Get the 12 bit result
+//
+    ADCResult = HAL_ADC_GetValue( &PitchShiftOffsetAdc );
+
+    return(ADCResult);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -1137,6 +1160,8 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 		//update previous reading to current reading
 		previous_button_reading_PB1 = 0;
 	}
+
+	pitch_shift_offset = ConvertPitchShiftOffset();
 }
 
 /**
@@ -1270,6 +1295,7 @@ void InitSystemPeripherals( void )
 //
 	__HAL_RCC_ADC1_CLK_ENABLE();
 	__HAL_RCC_ADC2_CLK_ENABLE();
+	__HAL_RCC_ADC3_CLK_ENABLE();
 	__HAL_RCC_GPIOC_CLK_ENABLE();
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 	__HAL_RCC_GPIOD_CLK_ENABLE();
@@ -1381,12 +1407,19 @@ void InitSystemPeripherals( void )
 	HAL_ADC_Init( &ReferenceAdc );
 	HAL_ADC_Start( &ReferenceAdc );
 
+	GpioInitStructure.Pin = GPIO_PIN_1;
+	GpioInitStructure.Mode = GPIO_MODE_ANALOG;
+	GpioInitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
+	GpioInitStructure.Pull = GPIO_NOPULL;
+	GpioInitStructure.Alternate = 0;
+	HAL_GPIO_Init(GPIOA, &GpioInitStructure );
+
 //
-// Configure level shifting reference A/D (ADC3)
+// Configure pitch shift offset A/D (ADC3)
 //
 	PitchShiftOffsetAdc.Instance = ADC3;
 	PitchShiftOffsetAdc.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV2;
-	PitchShiftOffsetAdc.Init.Resolution = ADC_RESOLUTION_12B;
+	PitchShiftOffsetAdc.Init.Resolution = ADC_RESOLUTION_8B;
 	PitchShiftOffsetAdc.Init.ScanConvMode = DISABLE;
 	PitchShiftOffsetAdc.Init.ContinuousConvMode = DISABLE;
 	PitchShiftOffsetAdc.Init.DiscontinuousConvMode = DISABLE;
@@ -1401,9 +1434,9 @@ void InitSystemPeripherals( void )
 	HAL_ADC_Start( &PitchShiftOffsetAdc );
 
 //
-// Select PORTA pin 2 ( ADC_CHANNEL_2 ) for the audio stream
+// Select PORTA pin 1 ( ADC_CHANNEL_1 ) for the audio stream
 //
-	sConfig.Channel = ADC_CHANNEL_2;
+	sConfig.Channel = ADC_CHANNEL_1;
 	sConfig.Rank = 1;
 	sConfig.SamplingTime = ADC_SAMPLETIME_112CYCLES;
 	sConfig.Offset = 0;
@@ -1496,28 +1529,7 @@ int ConvertReference(void)
     return(ADCResult);
 }
 
-int ConvertPitchShiftOffset(void)
-{
-	int
-		ADCResult;
 
-//
-// Start a conversion
-//
-	HAL_ADC_Start( &PitchShiftOffsetAdc );
-
-//
-// Wait for end of conversion
-//
-    HAL_ADC_PollForConversion( &PitchShiftOffsetAdc, HAL_MAX_DELAY );
-
-//
-// Get the 12 bit result
-//
-    ADCResult = HAL_ADC_GetValue( &PitchShiftOffsetAdc );
-
-    return(ADCResult);
-}
 
 #pragma GCC diagnostic pop
 
