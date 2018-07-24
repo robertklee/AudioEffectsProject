@@ -893,110 +893,93 @@ void TIM5_IRQHandler(void)
 }
 
 
+/**
+ * A FFT table utility function that shifts the buffer elements so buffer[i] = buffer[i-PitchOffset]
+ * Starts at start_index, which is the highest index and stops before end_index
+ * Clears all elements for last PitchOffset number of elements with 0's.
+ */
+inline void ShiftBufferElementsUp( float *Buffer, int start_index, int end_index, int PitchOffset)
+{
+    int PitchShift;
+
+    // Start at highest index, start_index, and grab elements from smaller indices,
+    // stopping before writing past end_index
+    PitchShift = start_index;
+    while ( PitchShift >= end_index + PitchOffset )
+    {
+        Buffer[PitchShift] = Buffer[PitchShift-PitchOffset];
+        Buffer[PitchShift+1] = Buffer[(PitchShift+1)-PitchOffset];
+        PitchShift -= 2;
+    }
+
+    // Clear the remaining (duplicated) portion of the table
+    while ( PitchShift >= end_index )
+    {
+        Buffer[PitchShift] = 0;
+        PitchShift--;
+    }
+}
+
+/**
+ * A FFT table utility function that shifts the buffer elements so buffer[i] = buffer[i+PitchOffset]
+ * Starts at start_index, which is the lowest index and stops before end_index
+ * Clears all elements for last PitchOffset number of elements with 0's.
+ */
+inline void ShiftBufferElementsDown ( float *Buffer, int start_index, int end_index, int PitchOffset)
+{
+    int PitchShift;
+
+    // Start at lowest index, start_index, and grab elements from higher indices,
+    // stopping before writing past end_index
+    PitchShift = start_index;
+    while ( PitchShift < ( end_index - PitchOffset ))
+    {
+        Buffer[PitchShift] = Buffer[PitchShift+PitchOffset];
+        Buffer[PitchShift+1] = Buffer[(PitchShift+1)+PitchOffset];
+        PitchShift += 2;
+    }
+
+    // Clear the remaining (duplicated) portion of the table
+    while ( PitchShift < end_index )
+    {
+        Buffer[PitchShift] = 0;
+        PitchShift++;
+    }
+}
+
 void PitchShift( float *Buffer )
 {
-	int
-		PitchShift,
 //
 // Pitch Shift by 32 bins in the FFT table
 // Each bin contains one complex number comprised of one real and one imaginary floating point number
 //
-	PitchOffset = (pitch_shift_offset >= 0)? pitch_shift_offset * 2: pitch_shift_offset * -2;
+	int PitchOffset = (pitch_shift_offset >= 0)? pitch_shift_offset * 2: pitch_shift_offset * -2;
 	//between -32 and 32, take absolute value
 
-//
-// Shift frequencies up effect
-//
+    // The FFT table is 2048 in length
+    const int FFT_table_size = 2048;
 
+    // The lower half, the indices [0, 1024), corresponds to positive frequencies
+    // The upper half, the indices [1024, 2048), corresponds to negative frequencies
+
+    // Shift frequencies up effect
 	if (pitch_shift_offset > 0)
 	{
-//
-// Do the lower half of FFT table
-//
-		PitchShift = 1024 - 2;
-		while ( PitchShift >= PitchOffset  )
-		{
-			Buffer[PitchShift] = Buffer[PitchShift-PitchOffset];
-			Buffer[PitchShift+1] = Buffer[(PitchShift+1)-PitchOffset];
-			PitchShift -= 2;
-		}
+        // Shift the lower half of the FFT table up
+        ShiftBufferElementsUp(Buffer, (FFT_table_size / 2 - 2), 0, PitchOffset);
 
-//
-// Clear the duplicated portion of the table
-//
-		while ( PitchShift >= 0 )
-		{
-			Buffer[PitchShift] = 0;
-			PitchShift--;
-		}
-
-
-//
-// Do the upper half of the FFT table
-//
-		PitchShift = 1024;
-		while ( PitchShift < ( 2048 - PitchOffset ))
-		{
-			Buffer[PitchShift] = Buffer[PitchShift+PitchOffset];
-			Buffer[PitchShift+1] = Buffer[(PitchShift+1)+PitchOffset];
-			PitchShift += 2;
-		}
-//
-// Clear the duplicated portion of the table
-//
-		while ( PitchShift < 2048 )
-		{
-			Buffer[PitchShift] = 0;
-			PitchShift++;
-		}
+        // Shift the upper half of the FFT table down
+        ShiftBufferElementsDown(Buffer, FFT_table_size / 2, FFT_table_size, PitchOffset);
 	}
 
-
-//
-// Shift frequencies down effect
-//
-
+    // Shift frequencies down effect
 	if (pitch_shift_offset < 0)
 	{
-//
-// Do the lower half of FFT table
-//
-		PitchShift = 0;
-		while ( PitchShift < 1024 - PitchOffset )
-		{
-			Buffer[PitchShift] = Buffer[PitchShift+PitchOffset];
-			Buffer[PitchShift+1] = Buffer[(PitchShift+1)+PitchOffset];
-			PitchShift += 2;
-		}
+        // Shift the lower half of the FFT table down
+        ShiftBufferElementsDown(Buffer, 0, FFT_table_size / 2, PitchOffset);
 
-//
-// Clear the duplicated portion of the table
-//
-		while ( PitchShift < 1024 )
-		{
-			Buffer[PitchShift] = 0;
-			PitchShift++;
-		}
-
-
-//
-// Do the upper half of the FFT table
-//
-		PitchShift = 2048 - 2;
-		while ( PitchShift >= 1024 + PitchOffset)
-		{
-			Buffer[PitchShift] = Buffer[PitchShift-PitchOffset];
-			Buffer[PitchShift+1] = Buffer[(PitchShift+1)-PitchOffset];
-			PitchShift -= 2;
-		}
-//
-// Clear the duplicated portion of the table
-//
-		while ( PitchShift >= 1024 )
-		{
-			Buffer[PitchShift] = 0;
-			PitchShift--;
-		}
+        // Shift the upper half of the FFT table up
+        ShiftBufferElementsUp(Buffer, (FFT_table_size - 2), FFT_table_size / 2, PitchOffset);
 	}
 }
 
