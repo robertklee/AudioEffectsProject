@@ -901,29 +901,19 @@ void PitchShift( float *Buffer )
 // Pitch Shift by 32 bins in the FFT table
 // Each bin contains one complex number comprised of one real and one imaginary floating point number
 //
-	PitchOffset = 32 * 2;
-
-
-	if (( PITCH_SHIFT_UP_8 == Effect ) || ( PITCH_SHIFT_DOWN_8 == Effect ))
-	{
-		PitchOffset = 8 * 2;
-	}
-
-	if (( PITCH_SHIFT_UP_16 == Effect ) || ( PITCH_SHIFT_DOWN_16 == Effect ))
-	{
-		PitchOffset = 16 * 2;
-	}
+	PitchOffset = (pitch_shift_offset >= 0)? pitch_shift_offset * 2: pitch_shift_offset * -2;
+	//between -32 and 32, take absolute value
 
 //
 // Shift frequencies up effect
 //
 
-	if (( PITCH_SHIFT_UP_8 == Effect ) || ( PITCH_SHIFT_UP_16 == Effect ) || ( PITCH_SHIFT_UP_32 == Effect ))
+	if (pitch_shift_offset > 0)
 	{
 //
 // Do the lower half of FFT table
 //
-		PitchShift = 1022;
+		PitchShift = 1024 - 2;
 		while ( PitchShift >= PitchOffset  )
 		{
 			Buffer[PitchShift] = Buffer[PitchShift-PitchOffset];
@@ -966,10 +956,47 @@ void PitchShift( float *Buffer )
 // Shift frequencies down effect
 //
 
-	if (( PITCH_SHIFT_DOWN_8 == Effect ) || ( PITCH_SHIFT_DOWN_16 == Effect ) || ( PITCH_SHIFT_DOWN_32 == Effect ))
+	if (pitch_shift_offset < 0)
 	{
+//
+// Do the lower half of FFT table
+//
+		PitchShift = 0;
+		while ( PitchShift < 1024 - PitchOffset )
+		{
+			Buffer[PitchShift] = Buffer[PitchShift+PitchOffset];
+			Buffer[PitchShift+1] = Buffer[(PitchShift+1)+PitchOffset];
+			PitchShift += 2;
+		}
+
+//
+// Clear the duplicated portion of the table
+//
+		while ( PitchShift < 1024 )
+		{
+			Buffer[PitchShift] = 0;
+			PitchShift++;
+		}
 
 
+//
+// Do the upper half of the FFT table
+//
+		PitchShift = 2048 - 2;
+		while ( PitchShift >= 1024 + PitchOffset)
+		{
+			Buffer[PitchShift] = Buffer[PitchShift-PitchOffset];
+			Buffer[PitchShift+1] = Buffer[(PitchShift+1)-PitchOffset];
+			PitchShift -= 2;
+		}
+//
+// Clear the duplicated portion of the table
+//
+		while ( PitchShift >= 1024 )
+		{
+			Buffer[PitchShift] = 0;
+			PitchShift--;
+		}
 	}
 }
 
@@ -1151,7 +1178,14 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 		previous_button_reading_PB1 = 0;
 	}
 
-	pitch_shift_offset = ConvertPitchShiftOffset();
+	if (pitch_shift_state == ENABLE_PITCH_SHIFT) {
+		int pitch_shift_offset_raw = ConvertPitchShiftOffset(); // 0 to 255
+
+		pitch_shift_offset_raw = 64.0/255 * pitch_shift_offset_raw; // reduce range to 0 to 64
+		pitch_shift_offset -= 32; // shift range to -32 to 32;
+	} else {
+		pitch_shift_offset = 0;
+	}
 }
 
 /**
@@ -1423,7 +1457,7 @@ void InitSystemPeripherals( void )
 	HAL_ADC_Start( &PitchShiftOffsetAdc );
 
 //
-// Select PORTA pin 1 ( ADC_CHANNEL_1 ) for the audio stream
+// Select PORTA pin 1 ( ADC_CHANNEL_1 ) for the pitch offset
 //
 	sConfig.Channel = ADC_CHANNEL_1;
 	sConfig.Rank = 1;
