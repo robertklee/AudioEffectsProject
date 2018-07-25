@@ -150,6 +150,9 @@
 #define ENABLE_ECHO				(1)
 #define ENABLE_PITCH_SHIFT		(1)
 
+#define ECHO_BUFFER_SIZE		(16384)
+#define ECHO_DAMPING			(0.5)
+
 volatile char previous_button_reading_PA0 = 0;
 volatile char button_state_PA0 = 0;
 volatile char previous_button_reading_PB11 = 0;
@@ -181,7 +184,7 @@ int echo_state = NO_EFFECT;
 volatile int pitch_shift_offset = 0;
 
 volatile int16_t
-	EchoBuffer[16384];
+	EchoBuffer[ECHO_BUFFER_SIZE];
 
 volatile uint16_t
 	EchoPointer = 0;
@@ -805,6 +808,42 @@ void Display_Mode() {
 	// TODO flag when you can write to buffer again
 }
 
+/**
+ * Zeroes out echo buffer
+ */
+inline void Echo_Buffer_Clear()
+{
+	for (int i = 0; i < ECHO_BUFFER_SIZE; i++)
+	{
+		EchoBuffer[i] = 0;
+	}
+
+	EchoPointer = 0;
+}
+
+/**
+ * Appends value to end of echo buffer
+ */
+inline void Echo_Buffer_Pushback(int16_t value)
+{
+	EchoBuffer[EchoPointer] = value;
+
+	// increment and wrap around
+	EchoPointer++;
+	EchoPointer %= ECHO_BUFFER_SIZE;
+}
+
+/**
+ * Returns value of EchoBuffer[EchoPointer - 1], wrapping the index around to ECHO_BUFFER_SIZE
+ */
+inline int16_t Echo_Buffer_Pop()
+{
+	int index = EchoPointer + 1;
+	index %= ECHO_BUFFER_SIZE;
+
+	return EchoBuffer[index];
+}
+
 void Update_State()
 {
 	if (button_state_PB11) {
@@ -827,6 +866,12 @@ void Update_State()
 			echo_state = !(echo_state);
 
 			Display_Mode();
+
+			if (echo_state == ENABLE_ECHO)
+			{
+				// Zero out buffer
+				Echo_Buffer_Clear();
+			}
 		}
 		previous_state_PC4 = 0;
 	}
@@ -929,9 +974,13 @@ void TIM5_IRQHandler(void)
 //
 // If enabled do the echo effect on the raw signal
 //
-			if ( ECHO == Effect )
+			if ( echo_state == ENABLE_ECHO )
 			{
+				Echo_Buffer_Pushback(AudioSignal); // pushback current AudioSignal
 
+				// pop from one index ahead of current EchoPointer
+				// (which was the AudioSignal value one second ago)
+				Buffers[ADCPTR].Buf[Buffers[ADCPTR].Head] = AudioSignal + Echo_Buffer_Pop() * ECHO_DAMPING;
 			}
 			else
 			{
@@ -1160,6 +1209,7 @@ main(int argc, char* argv[])
 {
 	// TODO echo
 	// TODO display bars for frequency
+	// TODO another timer for generating the bars running at 1/25 seconds
   // At this stage the system clock should have already been configured
   // at high speed.
 
