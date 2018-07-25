@@ -832,13 +832,13 @@ void Display_Mode() {
 }
 
 /**
- * Zeroes out echo buffer
+ * Clears out echo buffer to AD_Offset so when it's subtracted it becomes 0
  */
 inline void Echo_Buffer_Clear()
 {
 	for (int i = 0; i < ECHO_BUFFER_SIZE; i++)
 	{
-		EchoBuffer[i] = 0;
+		EchoBuffer[i] = AD_Offset;
 	}
 
 	EchoPointer = 0;
@@ -1003,7 +1003,7 @@ void TIM5_IRQHandler(void)
 
 				// pop from one index ahead of current EchoPointer
 				// (which was the AudioSignal value one second ago)
-				Buffers[ADCPTR].Buf[Buffers[ADCPTR].Head] = AudioSignal + Echo_Buffer_Pop() * ECHO_DAMPING;
+				Buffers[ADCPTR].Buf[Buffers[ADCPTR].Head] = AudioSignal + (Echo_Buffer_Pop() - AD_Offset)* ECHO_DAMPING;
 			}
 			else
 			{
