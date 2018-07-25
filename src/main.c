@@ -400,7 +400,7 @@ void Configure_LED_Display() {
 /**
  * Resets buffer head and tail for empty buffer
  */
-void Buffer_Clear()
+inline void Buffer_Clear()
 {
 	buffer_head = 0;
 	buffer_tail = -1; // flag that the buffer is empty
@@ -409,7 +409,7 @@ void Buffer_Clear()
 /**
  * Indicates if buffer is empty
  */
-int Buffer_Is_Empty()
+inline int Buffer_Is_Empty()
 {
 	return buffer_tail == -1;
 }
@@ -464,9 +464,9 @@ char Buffer_Pop(char dest[])
 }
 
 /**
- * Initializes buffer with all 0's
+ * Initializes buffer with all 0's. Returns 1 when successful
  */
-void Buffer_Init()
+int Buffer_Init()
 {
 	char all_zeros[NUM_OF_COLS];
 	for (int i = 0; i < NUM_OF_COLS; i++) {
@@ -478,6 +478,8 @@ void Buffer_Init()
 	}
 
 	Buffer_Clear();
+
+	return 1;
 }
 
 /**
@@ -1207,9 +1209,9 @@ int ConvertPitchShiftOffset(void)
 int
 main(int argc, char* argv[])
 {
-	// TODO echo
 	// TODO display bars for frequency
 	// TODO another timer for generating the bars running at 1/25 seconds
+	// TODO make a header file with function declarations
   // At this stage the system clock should have already been configured
   // at high speed.
 
