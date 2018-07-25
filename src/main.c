@@ -634,6 +634,21 @@ void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char sou
 			// add in new row at bottom
 			frame[NUM_OF_COLS - 1] = source[source_index][source_frame_index];
 			break;
+		case (RIGHT_TO_LEFT):
+			for (int i = 0; i < NUM_OF_COLS; i++) {
+				frame[i] = frame[i] >> 1;
+
+				char source_char = source[source_index][i];
+				// truncate everything left of column
+				char left_shifted = source_char << (NUM_OF_COLS - 1 - source_frame_index);
+
+				// remove everything right of column
+				char left_col_only = left_shifted & (0x7F ^ 0xFF);
+
+				// add in only the right column
+				frame[i] = frame[i] | left_col_only;
+			}
+			break;
 		default:
 			trace_printf("Not implemented exception. Invalid direction.");
 			break;
@@ -707,7 +722,7 @@ void Invade_Space()
 			{ 0x02, 0x01, 0x83, 0xC6, 0xCF, 0x0B, 0x8A, 0x41 },
 			{ 0x08, 0x10, 0xF8, 0xEC, 0xFE, 0xFA, 0x0A, 0xB0 }
 	};
-	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, space_invaders, 55, LEFT_TO_RIGHT);
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, space_invaders, 55, RIGHT_TO_LEFT);
 }
 
 /**
@@ -741,7 +756,7 @@ void Display_Pitch_Shift()
 			{ 0x00, 0x04, 0x0A, 0x11, 0xA0, 0x40, 0x00, 0xFF },
 			{ 0x00, 0x01, 0x02, 0x04, 0x88, 0x50, 0x20, 0xFF }
 	};
-	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, pitch_shift_message, 56, LEFT_TO_RIGHT);
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, pitch_shift_message, 56, RIGHT_TO_LEFT);
 }
 
 /**
@@ -775,7 +790,7 @@ void Display_Echo()
 			{ 0x00, 0x20, 0x50, 0x88, 0x04, 0x02, 0x01, 0xFF },
 			{ 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00, 0xFF }
 	};
-	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, echo_message, 56, LEFT_TO_RIGHT);
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, echo_message, 56, RIGHT_TO_LEFT);
 }
 
 /**
@@ -809,7 +824,7 @@ void Display_Pitch_Echo()
 			{ 0x00, 0xF4, 0x84, 0x87, 0x84, 0xF4, 0x00, 0xFF },
 			{ 0x00, 0x5F, 0x51, 0xD1, 0x51, 0x5F, 0x00, 0xFF }
 	};
-	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, pitch_echo_message, 56, LEFT_TO_RIGHT);
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, pitch_echo_message, 56, RIGHT_TO_LEFT);
 }
 
 void Display_Debugging() {
@@ -827,8 +842,6 @@ void Display_Mode() {
 	} else {
 		Invade_Space();
 	}
-
-	// TODO flag when you can write to buffer again
 }
 
 /**
