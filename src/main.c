@@ -137,10 +137,12 @@
 
 /**
  * Timer usage documentation:
+ * TIM2 - Generating frequency bars to display on LED array
  * TIM3 - polling of all button inputs, and debouncing
  * TIM4 - LED board drawing
  * TIM5 - FFT on input signal
  */
+#define TIM2_PRIORITY			(7)
 #define TIM3_PRIORITY 			(10)
 #define TIM4_PRIORITY			(5)
 #define TIM5_PRIORITY	 		(0)
@@ -289,6 +291,7 @@ void Init_GPIO_Port_Default_Speed_Pull(uint32_t pin, uint32_t mode, char bus)
 // important for these to be in global as they need to be accessed in interrupt service routine
 TIM_HandleTypeDef	DisplayTimer;
 TIM_HandleTypeDef 	LEDDisplayTimer;
+TIM_HandleTypeDef	FrequencySpectrumGeneratorTimer;
 void ConfigureTimers()
 {
 	__HAL_RCC_TIM3_CLK_ENABLE();
@@ -312,7 +315,7 @@ void ConfigureTimers()
 	int prescaler = 105;
 	LEDDisplayTimer.Init.Prescaler = prescaler - 1; // reduce to 800 kHz
 	LEDDisplayTimer.Init.Period =  84000000 / prescaler / REFRESH_RATE / NUMBER_OF_LEDS - 1;
-	// reduce to (refresh rate * Number of LEDs) frequency
+	// reduce to (REFRESH_RATE * NUMBER_OF_LEDS) frequency
 	LEDDisplayTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
 	LEDDisplayTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	HAL_TIM_Base_Init( &LEDDisplayTimer );
@@ -323,6 +326,24 @@ void ConfigureTimers()
 
 	__HAL_TIM_ENABLE_IT( &LEDDisplayTimer, TIM_IT_UPDATE );// Enable timer interrupt flag to be set when timer count is reached
 	__HAL_TIM_ENABLE( &LEDDisplayTimer );//Enable timer to start
+
+
+	__HAL_RCC_TIM2_CLK_ENABLE();
+	FrequencySpectrumGeneratorTimer.Instance = TIM2;
+	prescaler = 140;
+	FrequencySpectrumGeneratorTimer.Init.Period = prescaler - 1; // reduce to 600 kHz
+	// reduce to (FRAMES_PER_SECOND * 2) frequency
+	FrequencySpectrumGeneratorTimer.Init.Prescaler = 84000000 / prescaler / (FRAMES_PER_SECOND*2) - 1;
+	FrequencySpectrumGeneratorTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
+	FrequencySpectrumGeneratorTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	HAL_TIM_Base_Init( &FrequencySpectrumGeneratorTimer );
+
+	HAL_NVIC_SetPriority( TIM2_IRQn, TIM2_PRIORITY, TIM2_PRIORITY);
+	//set priority for the interrupt. Value 0 corresponds to highest priority
+	HAL_NVIC_EnableIRQ( TIM2_IRQn );//Enable interrupt function request of Timer2
+
+	__HAL_TIM_ENABLE_IT( &FrequencySpectrumGeneratorTimer, TIM_IT_UPDATE );// Enable timer interrupt flag to be set when timer count is reached
+	__HAL_TIM_ENABLE( &FrequencySpectrumGeneratorTimer );//Enable timer to start
 }
 
 void Configure_Ports()
@@ -549,7 +570,7 @@ void Display_Scan_Across_LEDs() {
 
 /**
  * Creates a bar of height 'height' in the specified column 'col'
- * Col and height must be <= NUM_OF_COLS
+ * Col must be <= NUM_OF_COLS
  */
 void Create_Column_With_Height(char dest[], int col, int height) {
 	char col_flag = 1 << col;
@@ -1209,11 +1230,9 @@ int ConvertPitchShiftOffset(void)
 int
 main(int argc, char* argv[])
 {
-	// TODO display bars for frequency
-	// TODO another timer for generating the bars running at 1/25 seconds
 	// TODO make a header file with function declarations
-  // At this stage the system clock should have already been configured
-  // at high speed.
+	// At this stage the system clock should have already been configured
+	// at high speed.
 
 	unsigned int loop;
 
@@ -1278,7 +1297,7 @@ main(int argc, char* argv[])
 	//TODO add code upon stop execution of program
 }
 
-void TIM3_IRQHandler()//Timer3 interrupt function
+void TIM3_IRQHandler() //Timer3 interrupt function
 {
 	__HAL_TIM_CLEAR_FLAG( &DisplayTimer, TIM_IT_UPDATE );//clear flag status
 
@@ -1484,6 +1503,74 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 	}
 
 	current_row++; //move to next row
+}
+
+void TIM2_IRQHandler() //Timer2 interrupt function
+{
+	__HAL_TIM_CLEAR_FLAG( &FrequencySpectrumGeneratorTimer, TIM_IT_UPDATE );//clear flag status
+
+	// This interrupt service routine is timer driven at 50 Hz
+
+	// The FFT table is 2048 in length
+	const int FFT_table_size = 2048;
+
+	// Look at lower half of FFT table where higher indices correspond to higher frequencies
+	// These indices are [0, 1023].
+	// Each complex number takes up two elements in the float array. (One for real, one for imaginary)
+	// We break 1024 elements, or 512 bins, into 8 groups, one for each column of the LED matrix
+	// This means we investigate 512 / 8, or 64 bins, for each group
+	// TODO  Since octaves are multiplicative, ideally we investigate in powers of 2
+	// For each bin, we take max(real, imaginary) and add to the float. We are avoiding taking
+	// the magnitude using sqrt(real^2 + imaginary^2) since sqrt is processor intensive and
+	// we don't need the accuracy. max(real,imaginary) is an adequate approximation since
+	// the max will dominate the square root anyway
+
+	// group_sum / group_num_bins gives the average sort-of-magnitude in that group
+	// average sort-of-magnitude / normalizing_constant brings the magnitude to a normalized_range
+	// normalized_range * 8 gives the number of LEDs to light up in the column
+
+	float group_sum = 0; // holds the accumulated sum for each group, used to average
+	const int group_num_bins = 64; // 64 bins per group, which is converted to a column on the display
+
+	const float normalizing_constant = 100; // divide the average by this, to normalize and convert to bars
+
+	int height_of_bar = 0; // the height to make the frequency bar
+	char frequency_spectrum_frame[NUM_OF_COLS]; // to hold the frame being generated
+
+	int bins_analyzed = 0; // the number of bins already analyzed in the group
+	int current_col = 0; // tracking which column we are in
+
+	if (Buffer_Is_Empty())
+	{
+		// Only generate the frequency spectrum frame if nothing is being displayed on LED display
+
+		for (int i = 0; i < FFT_table_size / 2; i += 2)
+		{
+			// Add max(procBuf[i], procBuf[i+1]) to group_sum
+			group_sum += (procBuf[i] > procBuf[i+1])? procBuf[i]: procBuf[i+1];
+			bins_analyzed++;
+
+			// if we have already analyzed the group, create a bar
+			if (bins_analyzed >= group_num_bins * 2)
+			{
+				group_sum /= group_num_bins; //average magnitude
+
+				group_sum /= normalizing_constant; // normalize
+
+				height_of_bar = (int) (group_sum * 8); // calculate hight of bar
+
+				Create_Column_With_Height(frequency_spectrum_frame, current_col, height_of_bar);
+				// reset temporary variables
+				bins_analyzed = 0;
+				group_sum = 0;
+				height_of_bar = 0;
+
+				// increment to next column
+				current_col++;
+			}
+		}
+		Buffer_Pushback(frequency_spectrum_frame); // add it to buffer
+	}
 }
 
 void InitSystemPeripherals( void )
