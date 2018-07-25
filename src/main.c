@@ -404,6 +404,14 @@ void Buffer_Clear()
 }
 
 /**
+ * Indicates if buffer is empty
+ */
+int Buffer_Is_Empty()
+{
+	return buffer_tail == -1;
+}
+
+/**
  * frame[] MUST have length NUM_OF_COLS
  * Returns 0 if buffer full, 1 if success
  */
@@ -598,7 +606,7 @@ void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char sou
 			frame[NUM_OF_COLS - 1] = source[source_index][source_frame_index];
 			break;
 		default:
-			trace_printf("Invalid direction.");
+			trace_printf("Not implemented exception. Invalid direction.");
 			break;
 		}
 
@@ -616,7 +624,7 @@ void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char sou
   11   11   11   11   11   11   11   11
     111       111       111       111
 
-or in hex:
+in hex:
 
 0x0e	0x03	0x80	0xe0	0x38	0x00
 0x31	0x8c	0x63	0x18	0xc6	0x00
@@ -627,7 +635,7 @@ or in hex:
 0x0e	0x03	0x80	0xe0	0x38	0x00
 0x00	0x00	0x00	0x00	0x00	0x00
  */
-void Create_Sine_Wave() {
+void Display_Sine_Wave() {
 	char sine_wave[7][NUM_OF_COLS] = {
 			{ 0x0e, 0x31, 0x40, 0x80, 0x40, 0x31, 0x0e, 0x00 },
 			{ 0x03, 0x8c, 0x50, 0x20, 0x50, 0x8c, 0x03, 0x00 },
@@ -639,17 +647,159 @@ void Create_Sine_Wave() {
 	Fill_Buffer_With_Panning_Image(7, NUM_OF_COLS, sine_wave, 49, LEFT_TO_RIGHT);
 }
 
+/**
+   1     1       11          11       1     1
+    1   1       1111        1111       1   1
+   1111111     111111      111111     1111111
+  11 111 11   11 11 11    11 11 11   11 111 11
+ 11111111111  11111111    11111111  11111111111
+ 1 1111111 1    1  1        1  1    1 1111111 1
+ 1 1     1 1   1 11 1      1 11 1   1 1     1 1
+    11 11     1 1  1 1    1 1  1 1     11 11
+
+in hex:
+
+10	40	60	06	02	08
+08	80	F0	0F	01	10
+1F	C1	F8	1F	83	F8
+37	63	6C	36	C6	EC
+7F	F3	FC	3F	CF	FE
+5F	D0	90	09	0B	FA
+50	51	68	16	8A	0A
+0D	82	94	29	41	B0
+ */
+void Invade_Space()
+{
+	char space_invaders[6][NUM_OF_COLS] = {
+			{ 0x10, 0x08, 0x1F, 0x37, 0x7F, 0x5F, 0x50, 0x0D },
+			{ 0x40, 0x80, 0xC1, 0x63, 0xF3, 0xD0, 0x51, 0x82 },
+			{ 0x60, 0xF0, 0xF8, 0x6C, 0xFC, 0x90, 0x68, 0x94 },
+			{ 0x06, 0x0F, 0x1F, 0x36, 0x3F, 0x09, 0x16, 0x29 },
+			{ 0x02, 0x01, 0x83, 0xC6, 0xCF, 0x0B, 0x8A, 0x41 },
+			{ 0x08, 0x10, 0xF8, 0xEC, 0xFE, 0xFA, 0x0A, 0xB0 }
+	};
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, space_invaders, 55, LEFT_TO_RIGHT);
+}
+
+/**
+
+   1111 111 11111 1111 1   1         1         1
+   1  1  1    1   1    1   1  1     1 1       1
+   1111  1    1   1    11111 1 1   1   1     1
+   1     1    1   1    1   1    1 1     1   1
+   1    111   1   1111 1   1     1       1 1
+                                          1
+111111111111111111111111111111111111111111111111
+
+in hex:
+
+00	00	00	00	00	00
+1E	EF	BD	10	04	01
+12	42	21	12	0A	02
+1E	42	21	F5	11	04
+10	42	21	10	A0	88
+10	E2	3D	10	40	50
+00	00	00	00	00	20
+FF	FF	FF	FF	FF	FF
+ */
+void Display_Pitch_Shift()
+{
+	char pitch_shift_message[6][NUM_OF_COLS] = {
+			{ 0x00, 0x1E, 0x12, 0x1E, 0x10, 0x10, 0x00, 0xFF },
+			{ 0x00, 0xEF, 0x42, 0x42, 0x42, 0xE2, 0x00, 0xFF },
+			{ 0x00, 0xBD, 0x21, 0x21, 0x21, 0x3D, 0x00, 0xFF },
+			{ 0x00, 0x10, 0x12, 0xF5, 0x10, 0x10, 0x00, 0xFF },
+			{ 0x00, 0x04, 0x0A, 0x11, 0xA0, 0x40, 0x00, 0xFF },
+			{ 0x00, 0x01, 0x02, 0x04, 0x88, 0x50, 0x20, 0xFF }
+	};
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, pitch_shift_message, 56, LEFT_TO_RIGHT);
+}
+
+/**
+                                             1
+   1111 1111 1   1 11111          1         1
+   1    1    1   1 1   1   1     1 1       1
+   1111 1    11111 1   1  1 1   1   1     1
+   1    1    1   1 1   1     1 1     1   1
+   1111 1111 1   1 11111      1       1 1
+                                       1
+111111111111111111111111111111111111111111111111
+
+in hex:
+
+00	00	00	00	00	04
+1E	F4	5F	00	20	08
+10	84	51	10	50	10
+1E	87	D1	28	88	20
+10	84	51	05	04	40
+1E	F4	5F	02	02	80
+00	00	00	00	01	00
+FF	FF	FF	FF	FF	FF
+ */
+void Display_Echo()
+{
+	char echo_message[6][NUM_OF_COLS] = {
+			{ 0x00, 0x1E, 0x10, 0x1E, 0x10, 0x1E, 0x00, 0xFF },
+			{ 0x00, 0xF4, 0x84, 0x87, 0x84, 0xF4, 0x00, 0xFF },
+			{ 0x00, 0x5F, 0x51, 0xD1, 0x51, 0x5F, 0x00, 0xFF },
+			{ 0x00, 0x00, 0x10, 0x28, 0x05, 0x02, 0x00, 0xFF },
+			{ 0x00, 0x20, 0x50, 0x88, 0x04, 0x02, 0x01, 0xFF },
+			{ 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x00, 0xFF }
+	};
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, echo_message, 56, LEFT_TO_RIGHT);
+}
+
+/**
+
+  1111 111 11111 1111  1   1111 1111 1   1 11111
+  1  1  1    1   1    1 1  1    1    1   1 1   1
+  1111  1    1   1     1   1111 1    11111 1   1
+  1     1    1   1    1 1  1    1    1   1 1   1
+  1    111   1   1111  1   1111 1111 1   1 11111
+
+111111111111111111111111111111111111111111111111
+
+in hex:
+
+00	00	00	00	00	00
+3D	DF	79	1E	F4	5F
+24	84	42	90	84	51
+3C	84	41	1E	87	D1
+20	84	42	90	84	51
+21	C4	79	1E	F4	5F
+00	00	00	00	00	00
+FF	FF	FF	FF	FF	FF
+ */
+void Display_Pitch_Echo()
+{
+	char pitch_echo_message[6][NUM_OF_COLS] = {
+			{ 0x00, 0x3D, 0x24, 0x3C, 0x20, 0x21, 0x00, 0xFF },
+			{ 0x00, 0xDF, 0x84, 0x84, 0x84, 0xC4, 0x00, 0xFF },
+			{ 0x00, 0x79, 0x42, 0x41, 0x42, 0x79, 0x00, 0xFF },
+			{ 0x00, 0x1E, 0x90, 0x1E, 0x90, 0x1E, 0x00, 0xFF },
+			{ 0x00, 0xF4, 0x84, 0x87, 0x84, 0xF4, 0x00, 0xFF },
+			{ 0x00, 0x5F, 0x51, 0xD1, 0x51, 0x5F, 0x00, 0xFF }
+	};
+	Fill_Buffer_With_Panning_Image(6, NUM_OF_COLS, pitch_echo_message, 56, LEFT_TO_RIGHT);
+}
+
+void Display_Debugging() {
+	Display_Sine_Wave();
+}
+
 void Display_Mode() {
+	Buffer_Clear();
 	if (pitch_shift_state == ENABLE_PITCH_SHIFT && echo_state == ENABLE_ECHO) {
-		// TODO draw on screen
+		Display_Pitch_Echo();
 	} else if (pitch_shift_state) {
-		// TODO draw on screen
+		Display_Pitch_Shift();
 	} else if (echo_state) {
-		// TODO draw on screen
+		Display_Echo();
 	} else {
-		// TODO draw on screen
+		Invade_Space();
 	}
 
+	// TODO flag when you can write to buffer again
 }
 
 void Update_State()
@@ -1034,12 +1184,11 @@ main(int argc, char* argv[])
 	Configure_Ports();
 	Configure_LED_Display();
 
-//	LED_Array_All_On();
 	LED_Array_All_Off();
 
 //	Test_LED_Array_Cycle_Through();
 
-	Create_Sine_Wave();
+	Display_Sine_Wave();
 
 	// Start timers LAST to ensure that no interrupts based on timers will
 	// trigger before initialization of board is complete
@@ -1064,7 +1213,7 @@ main(int argc, char* argv[])
 			if (previous_state_PA0) {
 				//falling edge triggered
 				Buffer_Clear();
-				Create_Sine_Wave();
+				Display_Debugging();
 			}
 			previous_state_PA0 = 0;
 		}
