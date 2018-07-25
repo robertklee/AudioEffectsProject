@@ -153,7 +153,7 @@
 #define ENABLE_PITCH_SHIFT		(1)
 
 #define ECHO_BUFFER_SIZE		(16384)
-#define ECHO_DAMPING			(0.5)
+#define ECHO_DAMPING			(0.35)
 
 volatile char previous_button_reading_PA0 = 0;
 volatile char button_state_PA0 = 0;
@@ -908,10 +908,15 @@ void Update_State()
 
 			Display_Mode();
 
-			if (echo_state == ENABLE_ECHO)
+			if (echo_state != ENABLE_ECHO)
+			{
+				ClearEchoBuffer = TRUE;
+			}
+			else if (ClearEchoBuffer == TRUE)
 			{
 				// Zero out buffer
 				Echo_Buffer_Clear();
+				ClearEchoBuffer = FALSE;
 			}
 		}
 		previous_state_PC4 = 0;
@@ -1017,11 +1022,11 @@ void TIM5_IRQHandler(void)
 //
 			if ( echo_state == ENABLE_ECHO )
 			{
-				Echo_Buffer_Pushback(AudioSignal); // pushback current AudioSignal
-
 				// pop from one index ahead of current EchoPointer
 				// (which was the AudioSignal value one second ago)
-				Buffers[ADCPTR].Buf[Buffers[ADCPTR].Head] = AudioSignal + (Echo_Buffer_Pop() - AD_Offset)* ECHO_DAMPING;
+				Buffers[ADCPTR].Buf[Buffers[ADCPTR].Head] = AudioSignal * (1-ECHO_DAMPING) + (Echo_Buffer_Pop() - AD_Offset) * ECHO_DAMPING;
+
+				Echo_Buffer_Pushback(AudioSignal); // pushback current AudioSignal
 			}
 			else
 			{
