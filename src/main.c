@@ -611,6 +611,7 @@ void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char sou
 
 		switch (direction) {
 		case (LEFT_TO_RIGHT):
+		case (RIGHT_TO_LEFT):
 			for (int i = 0; i < NUM_OF_COLS; i++) {
 				frame[i] = frame[i] << 1;
 
@@ -634,21 +635,21 @@ void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char sou
 			// add in new row at bottom
 			frame[NUM_OF_COLS - 1] = source[source_index][source_frame_index];
 			break;
-		case (RIGHT_TO_LEFT):
-			for (int i = 0; i < NUM_OF_COLS; i++) {
-				frame[i] = frame[i] >> 1;
-
-				char source_char = source[source_index][i];
-				// truncate everything left of column
-				char left_shifted = source_char << (NUM_OF_COLS - 1 - source_frame_index);
-
-				// remove everything right of column
-				char left_col_only = left_shifted & (0x7F ^ 0xFF);
-
-				// add in only the right column
-				frame[i] = frame[i] | left_col_only;
-			}
-			break;
+//		case (RIGHT_TO_LEFT):
+//			for (int i = 0; i < NUM_OF_COLS; i++) {
+//				frame[i] = frame[i] >> 1;
+//
+//				char source_char = source[source_index][i];
+//				// truncate everything left of column
+//				char left_shifted = source_char << (NUM_OF_COLS - 1 - source_frame_index);
+//
+//				// remove everything right of column
+//				char left_col_only = left_shifted & (0x7F ^ 0xFF);
+//
+//				// add in only the right column
+//				frame[i] = frame[i] | left_col_only;
+//			}
+//			break;
 		default:
 			trace_printf("Not implemented exception. Invalid direction.");
 			break;
