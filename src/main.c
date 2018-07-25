@@ -812,9 +812,9 @@ void Update_State()
 	} else {
 		if (previous_state_PB11) {
 			//falling edge triggered
-			Toggle_Display_State();
-
 			pitch_shift_state = !(pitch_shift_state);
+
+			Display_Mode();
 		}
 		previous_state_PB11 = 0;
 	}
@@ -824,9 +824,9 @@ void Update_State()
 	} else {
 		if (previous_state_PC4) {
 			//falling edge triggered
-			Toggle_Display_State();
-
 			echo_state = !(echo_state);
+
+			Display_Mode();
 		}
 		previous_state_PC4 = 0;
 	}
@@ -836,7 +836,6 @@ void Update_State()
 	} else {
 		if (previous_state_PB1) {
 			//falling edge triggered
-			Toggle_Display_State();
 
 			Display_Mode();
 		}
@@ -1312,6 +1311,7 @@ void TIM3_IRQHandler()//Timer3 interrupt function
 		previous_button_reading_PB1 = 0;
 	}
 
+	// Check potentiometer of pitch_shift_offset if ENABLE_PITCH_SHIFT
 	if (pitch_shift_state == ENABLE_PITCH_SHIFT) {
 		int pitch_shift_offset_raw = ConvertPitchShiftOffset(); // 0 to 255
 
