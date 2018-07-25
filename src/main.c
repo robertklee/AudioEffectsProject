@@ -174,7 +174,7 @@ volatile char current_col = 0;
 volatile int current_frame_number = 0;
 const int times_to_repeat_frame = REFRESH_RATE / FRAMES_PER_SECOND;
 
-int LED_Array_State = 0; //TODO remove after functional test demo
+int LED_Array_State = 0;
 int pitch_shift_state = NO_EFFECT;
 int echo_state = NO_EFFECT;
 
@@ -480,7 +480,7 @@ void Buffer_Init()
 /**
  * turns on all LEDs for testing
  */
-void LED_Array_All_On() {
+void Display_All_On() {
 	for (int i = 0; i < NUM_OF_COLS; i++) {
 		current_frame[i] = 0xFF;
 	}
@@ -489,18 +489,21 @@ void LED_Array_All_On() {
 /**
  * turns off all LEDs for testing
  */
-void LED_Array_All_Off() {
+void Display_All_Off() {
 	for (int i = 0; i < NUM_OF_COLS; i++) {
 		current_frame[i] = 0;
 	}
 }
 
-void Toggle_LED_Array() {
+/**
+ * If LED_Array is on, toggle off. If off, toggle on.
+ */
+void Toggle_Display_State() {
 	if (LED_Array_State) {
-		LED_Array_All_Off();
+		Display_All_Off();
 		LED_Array_State = 0;
 	} else {
-		LED_Array_All_On();
+		Display_All_On();
 		LED_Array_State = 1;
 	}
 }
@@ -509,7 +512,7 @@ void Toggle_LED_Array() {
  * Fill buffer with frames with one LED at a time, cycling through all LEDs
  * Precondition: buffer is at least framesToRepeat*64 long
  */
-void Test_LED_Array_Cycle_Through() {
+void Display_Scan_Across_LEDs() {
 	const int framesToRepeat = 3;
 	char frame[NUM_OF_COLS];
 
@@ -809,7 +812,7 @@ void Update_State()
 	} else {
 		if (previous_state_PB11) {
 			//falling edge triggered
-			Toggle_LED_Array();
+			Toggle_Display_State();
 
 			pitch_shift_state = !(pitch_shift_state);
 		}
@@ -821,7 +824,7 @@ void Update_State()
 	} else {
 		if (previous_state_PC4) {
 			//falling edge triggered
-			Toggle_LED_Array();
+			Toggle_Display_State();
 
 			echo_state = !(echo_state);
 		}
@@ -833,7 +836,7 @@ void Update_State()
 	} else {
 		if (previous_state_PB1) {
 			//falling edge triggered
-			Toggle_LED_Array();
+			Toggle_Display_State();
 
 			Display_Mode();
 		}
@@ -842,8 +845,7 @@ void Update_State()
 }
 
 
-
-/*
+/**
  * Name: TIM5_IRQHandler
  *
  * Description: Time 5 interrupt service routine call 16,000 times a second.
@@ -864,8 +866,6 @@ void Update_State()
  *		Switch effects mode
  *
  */
-
-
 void TIM5_IRQHandler(void)
 {
 
@@ -1149,7 +1149,7 @@ int ConvertPitchShiftOffset(void)
     HAL_ADC_PollForConversion( &PitchShiftOffsetAdc, HAL_MAX_DELAY );
 
 //
-// Get the 12 bit result
+// Get the 8 bit result
 //
     ADCResult = HAL_ADC_GetValue( &PitchShiftOffsetAdc );
 
@@ -1159,6 +1159,8 @@ int ConvertPitchShiftOffset(void)
 int
 main(int argc, char* argv[])
 {
+	// TODO echo
+	// TODO display bars for frequency
   // At this stage the system clock should have already been configured
   // at high speed.
 
@@ -1184,9 +1186,9 @@ main(int argc, char* argv[])
 	Configure_Ports();
 	Configure_LED_Display();
 
-	LED_Array_All_Off();
+	Display_All_Off();
 
-//	Test_LED_Array_Cycle_Through();
+//	Display_Scan_Across_LEDs();
 
 	Display_Sine_Wave();
 
@@ -1194,7 +1196,7 @@ main(int argc, char* argv[])
 	// trigger before initialization of board is complete
 	ConfigureTimers();
 
-	HAL_GPIO_WritePin( GPIOD, GPIO_PIN_12, 1);
+	HAL_GPIO_WritePin( GPIOD, GPIO_PIN_12, 1); // Signal initialization is complete on on-board LED
 
 	int previous_state_PA0 = 0;
 
