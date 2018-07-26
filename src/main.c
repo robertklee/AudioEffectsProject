@@ -593,7 +593,7 @@ void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char sou
 
 		switch (direction) {
 		case (LEFT_TO_RIGHT):
-		case (RIGHT_TO_LEFT):
+//		case (RIGHT_TO_LEFT):
 			for (int i = 0; i < NUM_OF_COLS; i++) {
 				frame[i] = frame[i] << 1;
 
@@ -617,21 +617,30 @@ void Fill_Buffer_With_Panning_Image(int _source_rows, int _source_cols, char sou
 			// add in new row at bottom
 			frame[NUM_OF_COLS - 1] = source[source_index][source_frame_index];
 			break;
-//		case (RIGHT_TO_LEFT):
-//			for (int i = 0; i < NUM_OF_COLS; i++) {
-//				frame[i] = frame[i] >> 1;
-//
+		case (RIGHT_TO_LEFT):
+			for (int i = 0; i < NUM_OF_COLS; i++) {
+				frame[i] = (frame[i] >> 1) & 0x7F;
+
 //				char source_char = source[source_index][i];
 //				// truncate everything left of column
-//				char left_shifted = source_char << (NUM_OF_COLS - 1 - source_frame_index);
+//				char left_shifted = source_char << (source_frame_index + 1);
 //
 //				// remove everything right of column
 //				char left_col_only = left_shifted & (0x7F ^ 0xFF);
-//
-//				// add in only the right column
-//				frame[i] = frame[i] | left_col_only;
-//			}
-//			break;
+
+				char source_char = source[source_index][i];
+				// truncate everything right of column
+				char right_shifted = source_char >> (NUM_OF_COLS - 1 - source_frame_index);
+
+				// remove everything left of column
+				char right_col_only = right_shifted & (0xFE ^ 0xFF);
+
+				char left_col_only = right_col_only << 7;
+
+				// add in only the right column
+				frame[i] = frame[i] | left_col_only;
+			}
+			break;
 		default:
 			trace_printf("Not implemented exception. Invalid direction.");
 			break;
@@ -1179,7 +1188,7 @@ void PitchShift( float *Buffer )
 // Pitch Shift by 32 bins in the FFT table
 // Each bin contains one complex number comprised of one real and one imaginary floating point number
 //
-	int PitchOffset = (pitch_shift_offset >= 0)? pitch_shift_offset * 2: pitch_shift_offset * -2;
+	int PitchOffset = abs(pitch_shift_offset * 2);
 	//between -32 and 32, take absolute value
 
     // The FFT table is 2048 in length
@@ -1187,15 +1196,16 @@ void PitchShift( float *Buffer )
 
     // The lower half, the indices [0, 1024), corresponds to positive frequencies
     // The upper half, the indices [1024, 2048), corresponds to negative frequencies
+    // Indices 0 and 1024 correspond to 0 frequency
 
     // Shift frequencies up effect
 	if (pitch_shift_offset > 0)
 	{
         // Shift the lower half of the FFT table up
-        ShiftBufferElementsUp(Buffer, (FFT_table_size / 2 - 2), 0, PitchOffset);
+        ShiftBufferElementsUp(Buffer, (FFT_table_size / 2 - 2), 100, PitchOffset);
 
         // Shift the upper half of the FFT table down
-        ShiftBufferElementsDown(Buffer, FFT_table_size / 2, FFT_table_size, PitchOffset);
+        ShiftBufferElementsDown(Buffer, FFT_table_size / 2 + 100, FFT_table_size, PitchOffset);
 	}
 
     // Shift frequencies down effect
@@ -1236,6 +1246,10 @@ int
 main(int argc, char* argv[])
 {
 	// TODO make a header file with function declarations
+	// TODO take max of past 5 iterations to be max height
+	// TODO wipe both sides of FFT when shifting
+	// TODO change mapping of pitch offset potentiometer
+
 	// At this stage the system clock should have already been configured
 	// at high speed.
 
@@ -1281,6 +1295,14 @@ main(int argc, char* argv[])
 //
 	AD_Offset = ConvertReference();
 
+	int col = 0;
+	int height = 3;
+	char fr[8];
+
+	for (int i = 0; i < 8; i++) {
+		fr[i]=0x0;
+	}
+
 	// Infinite loop
 	while (1)
 	{
@@ -1290,7 +1312,13 @@ main(int argc, char* argv[])
 			if (previous_state_PA0) {
 				//falling edge triggered
 				Buffer_Clear();
-				Display_Debugging();
+//				Display_Debugging();
+				Create_Column_With_Height(fr, col, height);
+				memcpy(current_frame, fr, 8);
+				col++;
+				height++;
+				col%=8;
+				height%=8;
 			}
 			previous_state_PA0 = 0;
 		}
@@ -1388,11 +1416,36 @@ void TIM3_IRQHandler() //Timer3 interrupt function
 	}
 
 	// Check potentiometer of pitch_shift_offset if ENABLE_PITCH_SHIFT
+	// TODO comment
 	if (pitch_shift_state == ENABLE_PITCH_SHIFT) {
-		int pitch_shift_offset_raw = ConvertPitchShiftOffset(); // 0 to 255
+		int pitch_shift_offset_raw = 255 - ConvertPitchShiftOffset(); // 0 to 255
 
 		pitch_shift_offset_raw = 64.0/255 * pitch_shift_offset_raw; // reduce range to 0 to 64
-		pitch_shift_offset -= 32; // shift range to -32 to 32;
+
+//		pitch_shift_offset = pitch_shift_offset_raw - 32; // shift range to -32 to 32;
+
+
+		if 		(pitch_shift_offset <= 2 ) { pitch_shift_offset = -32; }
+		else if (pitch_shift_offset <= 5 ) { pitch_shift_offset = -26; }
+		else if (pitch_shift_offset <= 8 ) { pitch_shift_offset = -22; }
+		else if (pitch_shift_offset <= 12) { pitch_shift_offset = -16; }
+		else if (pitch_shift_offset <= 15) { pitch_shift_offset = -13; }
+		else if (pitch_shift_offset <= 18) { pitch_shift_offset = -11; }
+		else if (pitch_shift_offset <= 22) { pitch_shift_offset = -8; }
+		else if (pitch_shift_offset <= 25) { pitch_shift_offset = -5; }
+		else if (pitch_shift_offset <= 28) { pitch_shift_offset = -3; }
+		else if (pitch_shift_offset <= 35) { pitch_shift_offset =  0; }
+		else if (pitch_shift_offset <= 38) { pitch_shift_offset =  3; }
+		else if (pitch_shift_offset <= 41) { pitch_shift_offset =  5; }
+		else if (pitch_shift_offset <= 45) { pitch_shift_offset =  8; }
+		else if (pitch_shift_offset <= 48) { pitch_shift_offset =  11; }
+		else if (pitch_shift_offset <= 51) { pitch_shift_offset =  13; }
+		else if (pitch_shift_offset <= 55) { pitch_shift_offset =  16; }
+		else if (pitch_shift_offset <= 58) { pitch_shift_offset =  22; }
+		else if (pitch_shift_offset <= 61) { pitch_shift_offset =  26; }
+		else if (pitch_shift_offset <= 64) { pitch_shift_offset =  32; }
+		else { trace_printf("Invalid pitch_shift_offset. Check number of bits for ADC?"); }
+
 	} else {
 		pitch_shift_offset = 0;
 	}
@@ -1466,7 +1519,7 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 		}
 	}
 
-	char enable_row = current_frame[current_col] & 1 << current_row;
+	char enable_row = current_frame[current_col] & (0x1 << current_row);
 	// for each case, turn off previous row, turn on current row
 	switch(current_row) {
 		case 0:
@@ -1535,9 +1588,9 @@ void TIM2_IRQHandler() //Timer2 interrupt function
 	// normalized_range * 8 gives the number of LEDs to light up in the column
 
 	float group_sum = 0; // holds the accumulated sum for each group, used to average
-	const int group_num_bins = 64; // 64 bins per group, which is converted to a column on the display
+	const float group_num_bins = 1; // 64 bins per group, which is converted to a column on the display
 
-	const float normalizing_constant = 100; // divide the average by this, to normalize and convert to bars
+	const float normalizing_constant = 2; // divide the average by this, to normalize and convert to bars
 
 	int height_of_bar = 0; // the height to make the frequency bar
 	char frequency_spectrum_frame[NUM_OF_COLS]; // to hold the frame being generated
@@ -1545,14 +1598,16 @@ void TIM2_IRQHandler() //Timer2 interrupt function
 	int bins_analyzed = 0; // the number of bins already analyzed in the group
 	int current_col = 0; // tracking which column we are in
 
-	if (Buffer_Is_Empty())
+//	if (Buffer_Is_Empty())
+	if (FALSE)
 	{
 		// Only generate the frequency spectrum frame if nothing is being displayed on LED display
 
 		for (int i = 0; i < FFT_table_size / 2; i += 2)
 		{
 			// Add max(procBuf[i], procBuf[i+1]) to group_sum
-			group_sum += (procBuf[i] > procBuf[i+1])? procBuf[i]: procBuf[i+1];
+//			group_sum += (procBuf[i] > procBuf[i+1])? procBuf[i]: procBuf[i+1];
+			group_sum += abs(procBuf[i]) + abs(procBuf[i+1]);
 			bins_analyzed++;
 
 			// if we have already analyzed the group, create a bar
@@ -1574,7 +1629,7 @@ void TIM2_IRQHandler() //Timer2 interrupt function
 				current_col++;
 			}
 		}
-		Buffer_Pushback(frequency_spectrum_frame); // add it to buffer
+//		Buffer_Pushback(frequency_spectrum_frame); // add it to buffer
 	}
 }
 
