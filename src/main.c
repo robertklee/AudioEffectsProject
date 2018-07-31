@@ -117,24 +117,6 @@
 #define TOP_TO_BOTTOM			(2)
 #define BOTTOM_TO_TOP			(3)
 
-#define R0						(0)
-#define R1						(1)
-#define R2						(2)
-#define R3						(3)
-#define R4						(4)
-#define R5						(5)
-#define R6						(6)
-#define R7						(7)
-
-#define C0						(0)
-#define C1						(1)
-#define C2						(2)
-#define C3						(3)
-#define C4						(4)
-#define C5						(5)
-#define C6						(6)
-#define C7						(7)
-
 /**
  * Timer usage documentation:
  * TIM2 - Generating frequency bars to display on LED array
@@ -296,7 +278,7 @@ void ConfigureTimers()
 {
 	__HAL_RCC_TIM3_CLK_ENABLE();
 	DisplayTimer.Instance = TIM3;
-	DisplayTimer.Init.Period = 49;//period & prescaler combination for 4 seconds count
+	DisplayTimer.Init.Period = 49;//period & prescaler combination for 200 Hz frequency
 	DisplayTimer.Init.Prescaler = 8399;
 	DisplayTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
 	DisplayTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
