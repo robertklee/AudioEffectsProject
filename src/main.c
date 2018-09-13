@@ -176,6 +176,8 @@ volatile uint16_t
 volatile uint8_t
 	ClearEchoBuffer = TRUE;
 
+volatile float Average = 0;
+
 //
 // Data structure for timer configuration
 //
@@ -315,7 +317,7 @@ void ConfigureTimers()
 	prescaler = 140;
 	FrequencySpectrumGeneratorTimer.Init.Period = prescaler - 1; // reduce to 600 kHz
 	// reduce to (FRAMES_PER_SECOND * 2) frequency
-	FrequencySpectrumGeneratorTimer.Init.Prescaler = 84000000 / prescaler / (FRAMES_PER_SECOND*2) - 1;
+	FrequencySpectrumGeneratorTimer.Init.Prescaler = 84000000 / prescaler / 10 - 1;
 	FrequencySpectrumGeneratorTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
 	FrequencySpectrumGeneratorTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	HAL_TIM_Base_Init( &FrequencySpectrumGeneratorTimer );
@@ -1425,25 +1427,25 @@ void TIM3_IRQHandler() //Timer3 interrupt function
 //		pitch_shift_offset = pitch_shift_offset_raw - 32; // shift range to -32 to 32;
 
 
-		if 		(pitch_shift_offset <= 2 ) { pitch_shift_offset = -32; }
-		else if (pitch_shift_offset <= 5 ) { pitch_shift_offset = -26; }
-		else if (pitch_shift_offset <= 8 ) { pitch_shift_offset = -22; }
-		else if (pitch_shift_offset <= 12) { pitch_shift_offset = -16; }
-		else if (pitch_shift_offset <= 15) { pitch_shift_offset = -13; }
-		else if (pitch_shift_offset <= 18) { pitch_shift_offset = -11; }
-		else if (pitch_shift_offset <= 22) { pitch_shift_offset = -8; }
-		else if (pitch_shift_offset <= 25) { pitch_shift_offset = -5; }
-		else if (pitch_shift_offset <= 28) { pitch_shift_offset = -3; }
-		else if (pitch_shift_offset <= 35) { pitch_shift_offset =  0; }
-		else if (pitch_shift_offset <= 38) { pitch_shift_offset =  3; }
-		else if (pitch_shift_offset <= 41) { pitch_shift_offset =  5; }
-		else if (pitch_shift_offset <= 45) { pitch_shift_offset =  8; }
-		else if (pitch_shift_offset <= 48) { pitch_shift_offset =  11; }
-		else if (pitch_shift_offset <= 51) { pitch_shift_offset =  13; }
-		else if (pitch_shift_offset <= 55) { pitch_shift_offset =  16; }
-		else if (pitch_shift_offset <= 58) { pitch_shift_offset =  22; }
-		else if (pitch_shift_offset <= 61) { pitch_shift_offset =  26; }
-		else if (pitch_shift_offset <= 64) { pitch_shift_offset =  32; }
+		if 		(pitch_shift_offset_raw <= 2 ) { pitch_shift_offset = -32; }
+		else if (pitch_shift_offset_raw <= 5 ) { pitch_shift_offset = -26; }
+		else if (pitch_shift_offset_raw <= 8 ) { pitch_shift_offset = -22; }
+		else if (pitch_shift_offset_raw <= 12) { pitch_shift_offset = -16; }
+		else if (pitch_shift_offset_raw <= 15) { pitch_shift_offset = -13; }
+		else if (pitch_shift_offset_raw <= 18) { pitch_shift_offset = -11; }
+		else if (pitch_shift_offset_raw <= 22) { pitch_shift_offset = -8; }
+		else if (pitch_shift_offset_raw <= 25) { pitch_shift_offset = -5; }
+		else if (pitch_shift_offset_raw <= 28) { pitch_shift_offset = -3; }
+		else if (pitch_shift_offset_raw <= 35) { pitch_shift_offset =  0; }
+		else if (pitch_shift_offset_raw <= 38) { pitch_shift_offset =  3; }
+		else if (pitch_shift_offset_raw <= 41) { pitch_shift_offset =  5; }
+		else if (pitch_shift_offset_raw <= 45) { pitch_shift_offset =  8; }
+		else if (pitch_shift_offset_raw <= 48) { pitch_shift_offset =  11; }
+		else if (pitch_shift_offset_raw <= 51) { pitch_shift_offset =  13; }
+		else if (pitch_shift_offset_raw <= 55) { pitch_shift_offset =  16; }
+		else if (pitch_shift_offset_raw <= 58) { pitch_shift_offset =  22; }
+		else if (pitch_shift_offset_raw <= 61) { pitch_shift_offset =  26; }
+		else if (pitch_shift_offset_raw <= 64) { pitch_shift_offset =  32; }
 		else { trace_printf("Invalid pitch_shift_offset. Check number of bits for ADC?"); }
 
 	} else {
@@ -1563,6 +1565,7 @@ void TIM4_IRQHandler() //Timer4 interrupt function
 	current_row++; //move to next row
 }
 
+volatile float TEMPmax = 1;
 void TIM2_IRQHandler() //Timer2 interrupt function
 {
 	__HAL_TIM_CLEAR_FLAG( &FrequencySpectrumGeneratorTimer, TIM_IT_UPDATE );//clear flag status
@@ -1598,11 +1601,15 @@ void TIM2_IRQHandler() //Timer2 interrupt function
 	int bins_analyzed = 0; // the number of bins already analyzed in the group
 	int current_col = 0; // tracking which column we are in
 
+	float buff[8] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+
 //	if (Buffer_Is_Empty())
 	if (FALSE)
 	{
 		// Only generate the frequency spectrum frame if nothing is being displayed on LED display
 
+
+		int temp = 0;
 		for (int i = 0; i < FFT_table_size / 2; i += 2)
 		{
 			// Add max(procBuf[i], procBuf[i+1]) to group_sum
@@ -1613,23 +1620,39 @@ void TIM2_IRQHandler() //Timer2 interrupt function
 			// if we have already analyzed the group, create a bar
 			if (bins_analyzed >= group_num_bins * 2)
 			{
-				group_sum /= group_num_bins; //average magnitude
+				if (group_sum > TEMPmax) {
+					TEMPmax = group_sum;
+				}
+				buff[temp] = group_sum;
+//				group_sum /= group_num_bins; //average magnitude
+//
+//				group_sum /= normalizing_constant; // normalize
+//
+//				height_of_bar = (int) (group_sum * 8); // calculate height of bar
 
-				group_sum /= normalizing_constant; // normalize
 
-				height_of_bar = (int) (group_sum * 8); // calculate hight of bar
 
-				Create_Column_With_Height(frequency_spectrum_frame, current_col, height_of_bar);
-				// reset temporary variables
+//
+//				Create_Column_With_Height(frequency_spectrum_frame, current_col, height_of_bar);
+//				// reset temporary variables
 				bins_analyzed = 0;
 				group_sum = 0;
 				height_of_bar = 0;
+
+				temp++;
 
 				// increment to next column
 				current_col++;
 			}
 		}
-//		Buffer_Pushback(frequency_spectrum_frame); // add it to buffer
+
+		for (int i = 0; i < 8; i++) {
+			height_of_bar = (int) (buff[i] / TEMPmax) * 8;
+			Create_Column_With_Height(frequency_spectrum_frame, current_col, height_of_bar);
+		}
+
+		TEMPmax *= 0.75;
+		Buffer_Pushback(frequency_spectrum_frame); // add it to buffer
 	}
 }
 
