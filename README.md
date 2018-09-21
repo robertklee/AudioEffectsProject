@@ -1,10 +1,10 @@
 # Audio Effects Project
 
-May-August, 2018
-
 Designed by Robert Lee and Declan McIntosh
 
-University of Victoria
+*University of Victoria*
+
+*May-August, 2018*
 
 ## Project Goal
 
@@ -12,7 +12,22 @@ The goal of this project was to create an audio player which can take an analog 
 
 ## Constraints
 
-Several constraints were placed on the project by the customer. The project required the use of the STM32F4 Discovery board (STM32 board) for digital signal processing (DSP) and logical processing. The board and all peripherals on the printed circuit board (PCB) must be powered solely by a USB port on a computer. USB ports will provide 5 V at 0.1 A for low power devices before handshaking negotiations are required [1]. The STM32 board must be used to implement pitch shifting and add an echo effect. The software must be written in the Eclipse Integrated Development Environment (IDE). The PCB must be designed using KiCAD. The designed enclosure (see Appendix A) must be designed in SolidWorks. The PCB and all components must be RoHS (Restriction of Hazardous Substances) compliant. A cost constraint of $150 CAD was decided by the group. 
+Several constraints were placed on the project by the customer. The project required the use of the **STM32F4 Discovery board** (STM32 board) for digital signal processing (DSP) and logical processing. The board and all peripherals on the printed circuit board (PCB) must be powered solely by a USB port on a computer. USB ports will provide 5 V at 0.1 A for low power devices before handshaking negotiations are required [1]. The STM32 board must be used to implement pitch shifting and add an echo effect. The software must be written in the Eclipse Integrated Development Environment (IDE). The PCB must be designed using KiCAD. The designed enclosure (see Appendix A) must be designed in SolidWorks. The PCB and all components must be RoHS (Restriction of Hazardous Substances) compliant. A cost constraint of $150 CAD was decided by the group. 
+
+## Repository Structure
+
+Source code is provided in `/src`. The embedded C program, `main.c`, contains the logic driving all the functionality of the board. The code is broken down into the following major components:
+-	Timer-run interrupt service routine to drive the LED 8-by-8 matrix display, as described above
+-	Timer-run interrupt service routine to poll input buttons and pitch shifting potentiometer, as described above
+-	Timer-run interrupt service routine to read ADC audio input, and to output processed data using the DAC
+-	Finite State Machine logic to determine the current state, and to display it on the LED matrix display
+-	LED matrix display backend functions and data, to enable the user to fill the display buffer with up to 10 seconds of images, played at 25 frames per second
+
+There were three major analog circuits within the **PCB**:
+-	Level shifter circuit: since the input signal is sinusoidal centered at 0 V, and the Analog-to-Digital Converter (ADC) accepts a voltage range from 0 V to 3 V, the input signal must be shifted up.
+-	Digital-to-Analog Converter (DAC) Quantization Error Amelioration Circuit: since the DAC can only output discrete voltages, not a continuous range of voltages, there are a lot of jagged bumps in the signal. These arise as high-frequency noise in the signal and are removed with a lowpass filter.
+-	Audio amplification and bandpass filtering prior to output to speaker: the LM386 amplifier was operated with a gain of 20. The bandpass filter consists of a DC blocking capacitor and a lowpass filter.
+
 
 ## Testing & Validation
 
@@ -38,3 +53,6 @@ There were some issues with a lack of simulation software embedded into the KiCA
 There were several limitations to the final design of our Audio FX board. Firstly, the display buffer could only handle 10 seconds of frames at 25 FPS. This took up 2 KB of memory, which can be an issue given the relatively limited 192 KB total memory on the board being shared across an echo buffer, FFT dependencies, and FFT output bins [7]. The I/O, while functional for the required testing with only 3 pushbuttons, was relatively limited in potential for further functionality without a convoluted user interface. The major limitation of the final implementation of the project was the poor maximum volume only amplifying the outputted signal by 15 times gain which made the sound quiet. 
 
 If a successor to our first design was to be built some major changes would be made. First, another second-order active-low-pass filter would be placed on the input to the ADC of the STM board so that higher frequency signals on the input would not be sampled and cause aliasing issues as it wraps around into the maximum frequency of 8 kHz signals the STM board is sampling at. This would help improve general sound quality of the audio signal. To further improve the audio signal a capacitor should be placed between power and ground to reduce ripples in the voltage. Alternatively, all the amplifiers could be powered off a separate voltage regulator which would help provide a clean power source. This is expected to reduce the notable noise assumed to be caused by a noisy voltage source. Knowing that the board is not being put in a manufactured case, the components would be chosen as surface mounts rather than mounting holes for wires to connect to offboard components. Some changes should also be made to confirm a better gain on the audio amplifier to make the music experience much better to the ear. These changes would improve the sound quality and make the music listening experience much better. Additionally, using plastic caps on the potentiometers would prevent capacitance noise on the audio line. This noise is caused when the conductive metal exterior of the potentiometer is touched by a capacitive disturbance like a person who is not properly grounded. Finally, the number of pull-up resistors could be reduced by using the board’s internal pull-up or pull-down resistors, reducing the cost and complexity of the PCB.
+
+### References
+[1]	“USB Power Delivery,” Universal Serial Bus. [Online]. Available: http://www.usb.org/developers/powerdelivery/. [Accessed: 29-Jul-2018]. 
