@@ -30,7 +30,7 @@ There were three major analog circuits within the **PCB**:
 
 ## Detailed Report
 
-Please see `AudioEffectsProjectReport.pdf` for schematic and PCB layout; functional test plan, and more detailed information on the project. Pictures are included.
+Please see ![AudioEffectsProjectReport.pdf](AudioEffectsProjectReport.pdf) for schematic and PCB layout; functional test plan, and more detailed information on the project. Pictures are included.
 
 ## Testing & Validation
 
