@@ -28,6 +28,9 @@ There were three major analog circuits within the **PCB**:
 -	Digital-to-Analog Converter (DAC) Quantization Error Amelioration Circuit: since the DAC can only output discrete voltages, not a continuous range of voltages, there are a lot of jagged bumps in the signal. These arise as high-frequency noise in the signal and are removed with a lowpass filter.
 -	Audio amplification and bandpass filtering prior to output to speaker: the LM386 amplifier was operated with a gain of 20. The bandpass filter consists of a DC blocking capacitor and a lowpass filter.
 
+## Detailed Report
+
+Please see `AudioEffectsProjectReport.pdf` for schematic and PCB layout; functional test plan, and more detailed information on the project. Pictures are included.
 
 ## Testing & Validation
 
